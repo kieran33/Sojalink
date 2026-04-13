@@ -28,3 +28,5 @@ router
     router.post('logout', [controllers.Session, 'destroy'])
   })
   .use(middleware.auth())
+
+console.log('DB utilisée :', process.env.DB_DATABASE)
