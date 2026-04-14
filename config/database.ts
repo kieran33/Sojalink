@@ -1,5 +1,6 @@
 import env from '#start/env'
 import { defineConfig } from '@adonisjs/lucid'
+import app from '@adonisjs/core/services/app'
 
 const dbConfig = defineConfig({
   connection: 'mysql',
@@ -20,6 +21,10 @@ const dbConfig = defineConfig({
         naturalSort: true,
         paths: ['database/migrations'],
       },
+      /**
+       * Emit SQL queries to the logger in development.
+       */
+      debug: app.inDev,
     },
   },
 })
