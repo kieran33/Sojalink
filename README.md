@@ -193,7 +193,7 @@ DB_DATABASE: Env.schema.string(),
 ## 8. Lancement du conteneur Docker
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up
 ```
 
 > Le flag `-f` est nécessaire car le fichier ne porte pas le nom par défaut (`docker-compose.yml`) attendu par Docker.
