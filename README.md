@@ -249,7 +249,7 @@ console.log('DB utilisée :', process.env.DB_DATABASE)
 > Afin de savoir quelle base de données sera utilisée lors du lancement du serveur.
 
 ```bash
-node ace serve --hmr
+node ace serve
 ```
 
 AdonisJS charge le fichier `.env` → la base de données utilisée est `sojalink_dev`.
