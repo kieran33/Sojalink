@@ -215,7 +215,29 @@ Les deux bases de données `sojalink_dev` et `sojalink_test` doivent apparaître
 
 ---
 
-## 10. Lancement de l'application
+## 10. Création d'un test
+
+Créer un test basique :
+
+```bash
+node ace make:test test_launch --suite=unit
+```
+
+Cela crée le fichier `tests/unit/test_launch.spec.ts`. Y ajouter le contenu suivant :
+
+```typescript
+import { test } from '@japa/runner'
+
+test.group('Test launch', () => {
+  test('test commande node ace test', async ({ assert }) => {
+    console.log('DB utilisée :', process.env.DB_DATABASE)
+  })
+})
+```
+
+---
+
+## 11. Lancement de l'application
 
 ### Lancer le serveur de développement
 
@@ -249,30 +271,6 @@ DB utilisée : sojalink_test
 √ test commande node ace test
 PASSED
 ```
-
----
-
-## 11. Vérification que les tests utilisent bien la DB test
-
-Créer un test basique :
-
-```bash
-node ace make:test test_launch --suite=unit
-```
-
-Cela crée le fichier `tests/unit/test_launch.spec.ts`. Y ajouter le contenu suivant :
-
-```typescript
-import { test } from '@japa/runner'
-
-test.group('Test launch', () => {
-  test('test commande node ace test', async ({ assert }) => {
-    console.log('DB utilisée :', process.env.DB_DATABASE)
-  })
-})
-```
-
-Lancer `node ace test` et vérifier que le terminal affiche bien `DB utilisée : sojalink_test`.
 
 ---
 
