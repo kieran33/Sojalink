@@ -241,6 +241,13 @@ test.group('Test launch', () => {
 
 ### Lancer le serveur de développement
 
+Dans le fichier `routes.ts` ajouter la ligne suivante :
+
+```typescript
+console.log('DB utilisée :', process.env.DB_DATABASE)
+ ```
+> Afin de savoir quelle base de données sera utilisée lors du lancement du serveur.
+
 ```bash
 node ace serve --hmr
 ```
