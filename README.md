@@ -1,6 +1,6 @@
 # SojaLink
 
-SojaLink est un middleware d'intégration centralisé qui synchronise les applications métiers de Sojadis (SojadisPro et Toki) afin de fiabiliser les données et améliorer la visibilité sur les processus internes.
+SojaLink est un middleware d'intégration centralisé qui synchronise les applications métiers internes de Sojadis afin de fiabiliser les données et améliorer la visibilité sur les processus internes.
 
 ---
 
@@ -12,6 +12,19 @@ Avant de commencer, vérifier que Node.js et npm sont bien installés :
 node -v
 npm -v
 ```
+
+---
+
+## Configuration de l'IDE
+
+Aucune configuration particulière n'est requise. Mais les extensions suivantes sont recommandées sous VS Code :
+
+| Extension | Utilité |
+|---|---|
+| **AdonisJS** | Autocomplétion et navigation pour les fichiers AdonisJS (routes, modèles, contrôleurs...) |
+| **Japa** | Lance et visualise les tests directement depuis l'éditeur, sans passer par le terminal |
+| **Docker** | Visualise et gère les conteneurs, images et fichiers `docker-compose` depuis VS Code |
+| **ESLint** | Affiche les erreurs et avertissements de lint directement dans l'éditeur — le fichier `eslint.config.js` est déjà configuré dans le projet |
 
 ---
 
@@ -30,81 +43,7 @@ cp .env.example .env#
 
 ---
 
-## 2. Installation d'AdonisJS
-
-Dans le terminal, à la racine du dossier `SojaLink` :
-
-```bash
-npm create adonisjs@latest .
-```
-
-> Le `.` installe AdonisJS directement dans le dossier courant sans créer de sous-dossier.
-
-Sélectionner **Hypermedia App** lors de la configuration.
-
-Puis commit et push :
-
-```bash
-git add .
-git commit -m "initialisation sojalink project"
-git push origin main
-```
-
----
-
-## 3. Setup de la base de données
-
-Créer et basculer sur la branche dédiée :
-
-```bash
-git fetch origin
-git checkout setup-docker-db
-```
-
----
-
-## 4. Script SQL d'initialisation
-
-Créer un dossier `init-db` à la racine du projet, puis un fichier `init-db/init.sql` :
-
-```sql
-CREATE DATABASE IF NOT EXISTS sojalink_dev;
-CREATE DATABASE IF NOT EXISTS sojalink_test;
-
-GRANT ALL PRIVILEGES ON sojalink_dev.* TO 'adonis'@'%';
-GRANT ALL PRIVILEGES ON sojalink_test.* TO 'adonis'@'%';
-
-FLUSH PRIVILEGES;
-```
-
-> Ce script est automatiquement exécuté par MariaDB au premier démarrage du conteneur, ce qui crée les deux bases de données `sojalink_dev` et `sojalink_test`.
-
----
-
-## 5. Configuration Docker
-
-Créer un fichier `docker-compose.dev.yml` à la racine du projet :
-
-```yaml
-version: "3.9"
-
-services:
-  database:
-    image: mariadb:latest
-    container_name: MariaDB_container
-    environment:
-      MARIADB_PASSWORD: adonis
-      MARIADB_USER: adonis
-      MARIADB_ROOT_PASSWORD: root
-    volumes:
-      - ./init-db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "3306:3306"
-```
-
----
-
-## 6. Configuration des variables d'environnement
+## Configuration des variables d'environnement
 
 Dans le fichier `.env`, ajouter la section Database :
 
@@ -144,53 +83,26 @@ DB_DATABASE=sojalink_test
 
 ---
 
-## 7. Configuration de la base de données AdonisJS
+## Fonctionnement de l'environnement local
 
-Dans le fichier `config/database.ts` changer la configuration pour passer à MySQL :
+### Deux bases de données
 
-```typescript
-import env from '#start/env'
-import { defineConfig } from '@adonisjs/lucid'
+SojaLink utilise deux bases de données MariaDB distinctes en local :
 
-const dbConfig = defineConfig({
-  connection: 'mysql',
+- `sojalink_dev` — utilisée lors du développement (`node ace serve`)
+- `sojalink_test` — utilisée lors de l'exécution des tests (`node ace test`)
 
-  connections: {
-    mysql: {
-      client: 'mysql2',
+AdonisJS sélectionne automatiquement la bonne base selon le contexte : il charge `.env` en mode développement et `.env.test` lors des tests (via la variable `NODE_ENV`). Cela garantit que les tests n'interfèrent jamais avec les données de développement.
 
-      connection: {
-        host: env.get('DB_HOST'),
-        port: env.get('DB_PORT'),
-        user: env.get('DB_USER'),
-        password: env.get('DB_PASSWORD'),
-        database: env.get('DB_DATABASE'),
-      },
+### Initialisation via Docker
 
-      migrations: {
-        naturalSort: true,
-        paths: ['database/migrations'],
-      },
-    },
-  },
-})
+Les deux bases de données sont créées automatiquement par un conteneur MariaDB défini dans `docker-compose.dev.yml`. Au premier démarrage du conteneur, MariaDB exécute automatiquement le script `init-db/init.sql` (monté dans `/docker-entrypoint-initdb.d/`), qui crée les deux bases et attribue les droits nécessaires à l'utilisateur `adonis`.
 
-export default dbConfig
-```
-
-Dans le fichier `start/env.ts`, ajouter les variables de base de données dans le schéma de validation :
-
-```typescript
-DB_HOST: Env.schema.string(),
-DB_PORT: Env.schema.number(),
-DB_USER: Env.schema.string(),
-DB_PASSWORD: Env.schema.string(),
-DB_DATABASE: Env.schema.string(),
-```
+> Ce script ne s'exécute qu'une seule fois, lors de la première initialisation du conteneur (quand le dossier de données est vide).
 
 ---
 
-## 8. Lancement du conteneur Docker
+## Lancer le conteneur Docker
 
 ```bash
 docker compose -f docker-compose.dev.yml up
@@ -198,9 +110,18 @@ docker compose -f docker-compose.dev.yml up
 
 > Le flag `-f` est nécessaire car le fichier ne porte pas le nom par défaut (`docker-compose.yml`) attendu par Docker.
 
+## Redémarrer le conteneur Docker
+
+```bash
+docker compose -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.dev.yml up
+```
+
+> Le flag `-v` supprime les volumes associés au conteneur, ce qui efface les données. À n'utiliser que si le script SQL d'init.sql a changé.
+
 ---
 
-## 9. Connexion à la base de données (HeidiSQL)
+## Connexion à la base de données (HeidiSQL)
 
 Ouvrir HeidiSQL et renseigner les informations suivantes :
 
@@ -215,38 +136,9 @@ Les deux bases de données `sojalink_dev` et `sojalink_test` doivent apparaître
 
 ---
 
-## 10. Création d'un test
-
-Créer un test basique :
-
-```bash
-node ace make:test test_launch --suite=unit
-```
-
-Cela crée le fichier `tests/unit/test_launch.spec.ts`. Y ajouter le contenu suivant :
-
-```typescript
-import { test } from '@japa/runner'
-
-test.group('Test launch', () => {
-  test('test commande node ace test', async ({ assert }) => {
-    console.log('DB utilisée :', process.env.DB_DATABASE)
-  })
-})
-```
-
----
-
-## 11. Lancement de l'application
+## Lancement de l'application
 
 ### Lancer le serveur de développement
-
-Dans le fichier `routes.ts` ajouter la ligne suivante :
-
-```typescript
-console.log('DB utilisée :', process.env.DB_DATABASE)
- ```
-> Afin de savoir quelle base de données sera utilisée lors du lancement du serveur.
 
 ```bash
 node ace serve
@@ -281,7 +173,7 @@ PASSED
 
 ---
 
-## 12. Reset de la base de données de test
+## Reset de la base de données de test
 
 Pour reset la base de données `sojalink_test` sans toucher à `sojalink_dev` :
 
@@ -290,3 +182,5 @@ NODE_ENV=test node ace migration:fresh
 ```
 
 > Cette commande supprime et recrée toutes les tables uniquement dans `sojalink_test`.
+
+---
