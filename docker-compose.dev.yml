@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  database: 
+    image: mariadb:latest
+    container_name: MariaDB_container
+    environment:
+      MARIADB_PASSWORD: adonis
+      MARIADB_USER: adonis
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - ./init-db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
