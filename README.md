@@ -184,3 +184,13 @@ NODE_ENV=test node ace migration:fresh
 > Cette commande supprime et recrée toutes les tables uniquement dans `sojalink_test`.
 
 ---
+
+## Créer les tables
+
+Pour créer toutes les tables dans la base de données `sojalink_dev` :
+
+```bash
+node ace migration:run
+```
+
+---
