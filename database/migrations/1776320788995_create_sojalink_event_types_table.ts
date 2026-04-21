@@ -6,9 +6,9 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.bigIncrements('id')
-      table.string('code').notNullable()
-      table.string('label').notNullable()
-      table.boolean('is_active').notNullable()
+      table.string('code').notNullable().index()
+      table.string('label').notNullable().index()
+      table.boolean('is_active').notNullable().index()
       table.datetime('created_at').notNullable()
       table.datetime('updated_at').nullable()
     })
