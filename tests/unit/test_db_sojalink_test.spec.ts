@@ -135,50 +135,123 @@ test.group('Check foreign key', (group) => {
     await db.table('sojalink_entity_correlations').insert(data.entityCorrelation)
   })
 
-  //Les tests suivants vérifient que la base de données refuse d'insérer des données incohérentes
+  //Les tests suivants vérifient que la base de données refuse d'insérer des données incohérentes avec des id à 9999 qui n'existent pas
   test('Foreign key event_type_id from sojalink_rules is correct', async ({ assert }) => {
-    await assert.rejects(() =>
-      db.table('sojalink_rules').insert({ ...data.rule, event_type_id: 9999 })
+    await assert.rejects(
+      () => db.table('sojalink_rules').insert({ ...data.rule, id: 2, event_type_id: 9999 }),
+      /foreign key/i
     )
   })
 
   test('Foreign key rule_id from sojalink_rule_verisons is correct', async ({ assert }) => {
-    await assert.rejects(() =>
-      db.table('sojalink_rules_versions').insert({ ...data.ruleVersion, rule_id: 9999 })
+    await assert.rejects(
+      () =>
+        db.table('sojalink_rule_versions').insert({ ...data.ruleVersion, id: 2, rule_id: 9999 }),
+      /foreign key/i
     )
   })
 
   test('Foreign key event_type_id from sojalink_events is correct', async ({ assert }) => {
-    await assert.rejects(() =>
-      db.table('sojalink_events').insert({ ...data.event, event_type_id: 9999 })
+    await assert.rejects(
+      () =>
+        db
+          .table('sojalink_events')
+          .insert({ ...data.event, id: 2, event_type_id: 9999, correlation_key: 'corr-002' }),
+      /foreign key/i
     )
   })
 
   test('Foreign key applied_rule_version_id from sojalink_events is correct', async ({
     assert,
   }) => {
-    await assert.rejects(() =>
-      db.table('sojalink_events').insert({ ...data.event, applied_rule_version_id: 9999 })
+    await assert.rejects(
+      () =>
+        db.table('sojalink_events').insert({
+          ...data.event,
+          id: 2,
+          applied_rule_version_id: 9999,
+          correlation_key: 'corr-002',
+        }),
+      /foreign key/i
     )
   })
 
   test('Foreign key event_id from sojalink_attempts is correct', async ({ assert }) => {
-    await assert.rejects(() =>
-      db.table('sojalink_attempts').insert({ ...data.attempt, event_id: 9999 })
+    await assert.rejects(
+      () => db.table('sojalink_attempts').insert({ ...data.attempt, id: 2, event_id: 9999 }),
+      /foreign key/i
     )
   })
 
   test('Foreign key attempt_id from sojalink_step_logs is correct', async ({ assert }) => {
-    await assert.rejects(() => db.table('sojalink_step_logs').insert({ attempt_id: 9999 }))
+    await assert.rejects(
+      () => db.table('sojalink_step_logs').insert({ ...data.stepLog, id: 2, attempt_id: 9999 }),
+      /foreign key/i
+    )
   })
 
   test('Foreign key created_by_event_id from sojalink_entity_correlations is correct', async ({
     assert,
   }) => {
-    await assert.rejects(() =>
-      db
-        .table('sojalink_entity_correlations')
-        .insert({ ...data.entityCorrelation, created_by_event_id: 9999 })
+    await assert.rejects(
+      () =>
+        db.table('sojalink_entity_correlations').insert({
+          ...data.entityCorrelation,
+          id: 2,
+          created_by_event_id: 9999,
+          source_app: 'app-b',
+          source_entity_type: 'user2',
+          source_entity_id: '456',
+          target_app: 'app-a',
+          target_entity_type: 'account2',
+          correlation_key: 'ec-002',
+        }),
+      /foreign key/i
+    )
+  })
+})
+
+//Réaliser des tests afin de vérifier les bonnes contraintes d'unicité
+test.group('Check unique constraint', () => {
+  test('Unique constraint on correlation_key from sojalink_events rejects duplicate', async ({
+    assert,
+  }) => {
+    await assert.rejects(
+      () =>
+        db.table('sojalink_events').insert({
+          ...data.event,
+          id: 2,
+          correlation_key: 'corr-001', //Ici on essaie d'ajouter une seconde fois la même correlation_key
+        }),
+      /duplicate|unique/i
+    )
+  })
+
+  test('Unique constraint on correlation_key from sojalink_entity_correlations rejects duplicate', async ({
+    assert,
+  }) => {
+    await assert.rejects(
+      () =>
+        db.table('sojalink_entity_correlations').insert({
+          ...data.entityCorrelation,
+          id: 2,
+          correlation_key: 'ec-001', //Ici on essaie d'ajouter une seconde fois la même correlation_key
+          source_entity_id: '999', //Avec le tuple de la contrainte composite qui est différent
+        }),
+      /duplicate|unique/i
+    )
+  })
+  test('Unique constraint composite from sojalink_entity_correlations rejects duplicate', async ({
+    assert,
+  }) => {
+    await assert.rejects(
+      () =>
+        db.table('sojalink_entity_correlations').insert({
+          ...data.entityCorrelation,
+          id: 2,
+          correlation_key: 'ec-002', //Ici on essaie d'ajouter une autre correlation_key avec le même tuple pour la contrainte composite
+        }),
+      /duplicate|unique/i
     )
   })
 })
