@@ -17,7 +17,7 @@ export default class extends BaseSchema {
       table.string('source_entity_type').notNullable()
       table.string('source_entity_id').notNullable()
       table.string('source_event_id').nullable()
-      table.string('correlation_key').notNullable().unique().index()
+      table.string('correlation_key').notNullable().unique()
       table.string('status').notNullable().index()
       table.json('payload_json').notNullable()
       table
