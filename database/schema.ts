@@ -7,6 +7,248 @@
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
+export class SojalinkAttemptSchema extends BaseModel {
+  static $columns = [
+    'attemptNumber',
+    'errorCode',
+    'errorMessage',
+    'eventId',
+    'finishedAt',
+    'id',
+    'startedAt',
+    'status',
+  ] as const
+  $columns = SojalinkAttemptSchema.$columns
+  @column()
+  declare attemptNumber: number
+  @column()
+  declare errorCode: string | null
+  @column()
+  declare errorMessage: string | null
+  @column()
+  declare eventId: bigint | number
+  @column.dateTime()
+  declare finishedAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column.dateTime()
+  declare startedAt: DateTime
+  @column()
+  declare status: string
+}
+
+export class SojalinkEntityCorrelationSchema extends BaseModel {
+  static $columns = [
+    'correlationKey',
+    'createdAt',
+    'createdByEventId',
+    'id',
+    'sourceApp',
+    'sourceEntityId',
+    'sourceEntityType',
+    'targetApp',
+    'targetEntityId',
+    'targetEntityType',
+    'updatedAt',
+  ] as const
+  $columns = SojalinkEntityCorrelationSchema.$columns
+  @column()
+  declare correlationKey: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdByEventId: bigint | number
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column()
+  declare sourceApp: string
+  @column()
+  declare sourceEntityId: string
+  @column()
+  declare sourceEntityType: string
+  @column()
+  declare targetApp: string
+  @column()
+  declare targetEntityId: string
+  @column()
+  declare targetEntityType: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class SojalinkEventSchema extends BaseModel {
+  static $columns = [
+    'appliedRuleVersionId',
+    'correlationKey',
+    'createdAt',
+    'eventTypeId',
+    'id',
+    'occurredAt',
+    'payloadJson',
+    'processedAt',
+    'processingStartedAt',
+    'resolutionSnapshotJson',
+    'sourceApp',
+    'sourceEntityId',
+    'sourceEntityType',
+    'sourceEventId',
+    'status',
+    'updatedAt',
+  ] as const
+  $columns = SojalinkEventSchema.$columns
+  @column()
+  declare appliedRuleVersionId: bigint | number
+  @column()
+  declare correlationKey: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare eventTypeId: bigint | number
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column.dateTime()
+  declare occurredAt: DateTime
+  @column()
+  declare payloadJson: string
+  @column.dateTime()
+  declare processedAt: DateTime | null
+  @column.dateTime()
+  declare processingStartedAt: DateTime | null
+  @column()
+  declare resolutionSnapshotJson: string
+  @column()
+  declare sourceApp: string
+  @column()
+  declare sourceEntityId: string
+  @column()
+  declare sourceEntityType: string
+  @column()
+  declare sourceEventId: string | null
+  @column()
+  declare status: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class SojalinkEventTypeSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'id', 'isActive', 'label', 'updatedAt'] as const
+  $columns = SojalinkEventTypeSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column()
+  declare isActive: boolean
+  @column()
+  declare label: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class SojalinkRuleSchema extends BaseModel {
+  static $columns = [
+    'code',
+    'createdAt',
+    'eventTypeId',
+    'id',
+    'isActive',
+    'label',
+    'priority',
+    'updatedAt',
+  ] as const
+  $columns = SojalinkRuleSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare eventTypeId: bigint | number
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column()
+  declare isActive: boolean
+  @column()
+  declare label: string
+  @column()
+  declare priority: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class SojalinkRuleVersionSchema extends BaseModel {
+  static $columns = [
+    'conditionsJson',
+    'createdAt',
+    'id',
+    'isActive',
+    'pipelineJson',
+    'ruleId',
+    'updatedAt',
+    'versionNumber',
+  ] as const
+  $columns = SojalinkRuleVersionSchema.$columns
+  @column()
+  declare conditionsJson: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column()
+  declare isActive: boolean
+  @column()
+  declare pipelineJson: string
+  @column()
+  declare ruleId: bigint | number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare versionNumber: number
+}
+
+export class SojalinkStepLogSchema extends BaseModel {
+  static $columns = [
+    'attemptId',
+    'errorCode',
+    'errorMessage',
+    'finishedAt',
+    'handlerKey',
+    'id',
+    'inputJson',
+    'outputJson',
+    'startedAt',
+    'status',
+    'stepCode',
+    'stepIndex',
+  ] as const
+  $columns = SojalinkStepLogSchema.$columns
+  @column()
+  declare attemptId: bigint | number
+  @column()
+  declare errorCode: string | null
+  @column()
+  declare errorMessage: string | null
+  @column.dateTime()
+  declare finishedAt: DateTime | null
+  @column()
+  declare handlerKey: string
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column()
+  declare inputJson: string
+  @column()
+  declare outputJson: string | null
+  @column.dateTime()
+  declare startedAt: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare stepCode: string
+  @column()
+  declare stepIndex: number
+}
+
 export class UserSchema extends BaseModel {
   static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'updatedAt'] as const
   $columns = UserSchema.$columns
