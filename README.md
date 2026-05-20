@@ -194,3 +194,20 @@ node ace migration:run
 ```
 
 ---
+
+## Lancer les seeders 
+
+Pour initialiser la base de données avec un jeu de données minimal cohérent :
+
+```bash
+node ace db:seed
+```
+
+Cela crée automatiquement un `event_type`, une `rule` liée à cet `event_type`, et une `rule_version` active liée à cette `rule`. La commande est rejouable et l'exécuter plusieurs fois ne crée pas de doublons.
+
+Pour repartir d'une base propre avant de relancer les seeders :
+
+```bash
+node ace db:truncate
+node ace db:seed
+```
