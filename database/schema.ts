@@ -7,17 +7,66 @@
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
+export class QueueJobSchema extends BaseModel {
+  static $columns = ['acquiredAt', 'data', 'error', 'executeAt', 'finishedAt', 'id', 'queue', 'score', 'status', 'workerId'] as const
+  $columns = QueueJobSchema.$columns
+  @column()
+  declare acquiredAt: bigint | number | null
+  @column()
+  declare data: string
+  @column()
+  declare error: string | null
+  @column()
+  declare executeAt: bigint | number | null
+  @column()
+  declare finishedAt: bigint | number | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare queue: string
+  @column()
+  declare score: bigint | number | null
+  @column()
+  declare status: string
+  @column()
+  declare workerId: string | null
+}
+
+export class QueueScheduleSchema extends BaseModel {
+  static $columns = ['createdAt', 'cronExpression', 'everyMs', 'fromDate', 'id', 'lastRunAt', 'name', 'nextRunAt', 'payload', 'runCount', 'runLimit', 'status', 'timezone', 'toDate'] as const
+  $columns = QueueScheduleSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare cronExpression: string | null
+  @column()
+  declare everyMs: bigint | number | null
+  @column.dateTime()
+  declare fromDate: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.dateTime()
+  declare lastRunAt: DateTime | null
+  @column()
+  declare name: string
+  @column.dateTime()
+  declare nextRunAt: DateTime | null
+  @column()
+  declare payload: string
+  @column()
+  declare runCount: number
+  @column()
+  declare runLimit: number | null
+  @column()
+  declare status: string
+  @column()
+  declare timezone: string
+  @column.dateTime()
+  declare toDate: DateTime | null
+}
+
 export class SojalinkAttemptSchema extends BaseModel {
-  static $columns = [
-    'attemptNumber',
-    'errorCode',
-    'errorMessage',
-    'eventId',
-    'finishedAt',
-    'id',
-    'startedAt',
-    'status',
-  ] as const
+  static $columns = ['attemptNumber', 'errorCode', 'errorMessage', 'eventId', 'finishedAt', 'id', 'startedAt', 'status'] as const
   $columns = SojalinkAttemptSchema.$columns
   @column()
   declare attemptNumber: number
@@ -38,19 +87,7 @@ export class SojalinkAttemptSchema extends BaseModel {
 }
 
 export class SojalinkEntityCorrelationSchema extends BaseModel {
-  static $columns = [
-    'correlationKey',
-    'createdAt',
-    'createdByEventId',
-    'id',
-    'sourceApp',
-    'sourceEntityId',
-    'sourceEntityType',
-    'targetApp',
-    'targetEntityId',
-    'targetEntityType',
-    'updatedAt',
-  ] as const
+  static $columns = ['correlationKey', 'createdAt', 'createdByEventId', 'id', 'sourceApp', 'sourceEntityId', 'sourceEntityType', 'targetApp', 'targetEntityId', 'targetEntityType', 'updatedAt'] as const
   $columns = SojalinkEntityCorrelationSchema.$columns
   @column()
   declare correlationKey: string
@@ -77,24 +114,7 @@ export class SojalinkEntityCorrelationSchema extends BaseModel {
 }
 
 export class SojalinkEventSchema extends BaseModel {
-  static $columns = [
-    'appliedRuleVersionId',
-    'correlationKey',
-    'createdAt',
-    'eventTypeId',
-    'id',
-    'occurredAt',
-    'payloadJson',
-    'processedAt',
-    'processingStartedAt',
-    'resolutionSnapshotJson',
-    'sourceApp',
-    'sourceEntityId',
-    'sourceEntityType',
-    'sourceEventId',
-    'status',
-    'updatedAt',
-  ] as const
+  static $columns = ['appliedRuleVersionId', 'correlationKey', 'createdAt', 'eventTypeId', 'id', 'occurredAt', 'payloadJson', 'processedAt', 'processingStartedAt', 'resolutionSnapshotJson', 'sourceApp', 'sourceEntityId', 'sourceEntityType', 'sourceEventId', 'status', 'updatedAt'] as const
   $columns = SojalinkEventSchema.$columns
   @column()
   declare appliedRuleVersionId: bigint | number
@@ -148,16 +168,7 @@ export class SojalinkEventTypeSchema extends BaseModel {
 }
 
 export class SojalinkRuleSchema extends BaseModel {
-  static $columns = [
-    'code',
-    'createdAt',
-    'eventTypeId',
-    'id',
-    'isActive',
-    'label',
-    'priority',
-    'updatedAt',
-  ] as const
+  static $columns = ['code', 'createdAt', 'eventTypeId', 'id', 'isActive', 'label', 'priority', 'updatedAt'] as const
   $columns = SojalinkRuleSchema.$columns
   @column()
   declare code: string
@@ -178,16 +189,7 @@ export class SojalinkRuleSchema extends BaseModel {
 }
 
 export class SojalinkRuleVersionSchema extends BaseModel {
-  static $columns = [
-    'conditionsJson',
-    'createdAt',
-    'id',
-    'isActive',
-    'pipelineJson',
-    'ruleId',
-    'updatedAt',
-    'versionNumber',
-  ] as const
+  static $columns = ['conditionsJson', 'createdAt', 'id', 'isActive', 'pipelineJson', 'ruleId', 'updatedAt', 'versionNumber'] as const
   $columns = SojalinkRuleVersionSchema.$columns
   @column()
   declare conditionsJson: string
@@ -208,20 +210,7 @@ export class SojalinkRuleVersionSchema extends BaseModel {
 }
 
 export class SojalinkStepLogSchema extends BaseModel {
-  static $columns = [
-    'attemptId',
-    'errorCode',
-    'errorMessage',
-    'finishedAt',
-    'handlerKey',
-    'id',
-    'inputJson',
-    'outputJson',
-    'startedAt',
-    'status',
-    'stepCode',
-    'stepIndex',
-  ] as const
+  static $columns = ['attemptId', 'errorCode', 'errorMessage', 'finishedAt', 'handlerKey', 'id', 'inputJson', 'outputJson', 'startedAt', 'status', 'stepCode', 'stepIndex'] as const
   $columns = SojalinkStepLogSchema.$columns
   @column()
   declare attemptId: bigint | number

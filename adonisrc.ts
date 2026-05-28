@@ -1,5 +1,7 @@
+import { indexPages } from '@adonisjs/inertia'
 import { indexEntities } from '@adonisjs/core'
 import { defineConfig } from '@adonisjs/core/app'
+import { generateRegistry } from '@tuyau/core/hooks'
 
 export default defineConfig({
   /*
@@ -27,6 +29,7 @@ export default defineConfig({
     () => import('@adonisjs/core/commands'),
     () => import('@adonisjs/lucid/commands'),
     () => import('@adonisjs/session/commands'),
+    () => import('@adonisjs/inertia/commands'),
   ],
 
   /*
@@ -52,6 +55,8 @@ export default defineConfig({
     () => import('@adonisjs/shield/shield_provider'),
     () => import('@adonisjs/static/static_provider'),
     () => import('@adonisjs/lucid/database_provider'),
+    () => import('@adonisjs/cors/cors_provider'),
+    () => import('@adonisjs/inertia/inertia_provider'),
     () => import('@adonisjs/auth/auth_provider'),
   ],
 
@@ -81,17 +86,17 @@ export default defineConfig({
   tests: {
     suites: [
       {
-        files: ['tests/unit/**/*.spec.ts'],
+        files: ['tests/unit/**/*.spec.{ts,js}'],
         name: 'unit',
         timeout: 2000,
       },
       {
-        files: ['tests/functional/**/*.spec.ts'],
+        files: ['tests/functional/**/*.spec.{ts,js}'],
         name: 'functional',
         timeout: 30000,
       },
       {
-        files: ['tests/browser/**/*.spec.ts'],
+        files: ['tests/browser/**/*.spec.{ts,js}'],
         name: 'browser',
         timeout: 300000,
       },
@@ -101,11 +106,11 @@ export default defineConfig({
 
   /*
   |--------------------------------------------------------------------------
-  | Meta files
+  | Metafiles
   |--------------------------------------------------------------------------
   |
   | A collection of files you want to copy to the build folder when creating
-  | a production build.
+  | the production build.
   |
   */
   metaFiles: [
@@ -119,19 +124,14 @@ export default defineConfig({
     },
   ],
 
-  /*
-  |--------------------------------------------------------------------------
-  | Hooks
-  |--------------------------------------------------------------------------
-  |
-  | Assembler hooks are executed by the Assembler dev tool during various
-  | stages. Assembler is responsible for running the dev-server, tests, and
-  | creating production builds. These hooks run in a separate process than
-  | the main AdonisJS app.
-  |
-  */
   hooks: {
-    init: [indexEntities()],
+    init: [
+      indexEntities({
+        transformers: { enabled: true, withSharedProps: true },
+      }),
+      indexPages({ framework: 'react' }),
+      generateRegistry(),
+    ],
     buildStarting: [() => import('@adonisjs/vite/build_hook')],
   },
 })
