@@ -5,7 +5,7 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
-      table.bigIncrements('id')
+      table.increments('id')
       table.string('source_app').notNullable()
       table.string('source_entity_type').notNullable()
       table.string('source_entity_id').notNullable()
@@ -14,14 +14,14 @@ export default class extends BaseSchema {
       table.string('target_entity_id').notNullable()
       table.string('correlation_key').notNullable().unique()
       table
-        .bigInteger('created_by_event_id')
+        .integer('created_by_event_id')
         .unsigned()
         .references('id')
         .inTable('sojalink_events')
         .notNullable()
         .index()
-      table.datetime('created_at').notNullable()
-      table.datetime('updated_at').nullable()
+      table.timestamp('created_at').notNullable().defaultTo(this.now())
+      table.timestamp('updated_at').nullable()
 
       table.unique(
         [

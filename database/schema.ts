@@ -75,11 +75,11 @@ export class SojalinkAttemptSchema extends BaseModel {
   @column()
   declare errorMessage: string | null
   @column()
-  declare eventId: bigint | number
+  declare eventId: number
   @column.dateTime()
   declare finishedAt: DateTime | null
   @column({ isPrimary: true })
-  declare id: bigint | number
+  declare id: number
   @column.dateTime()
   declare startedAt: DateTime
   @column()
@@ -94,9 +94,9 @@ export class SojalinkEntityCorrelationSchema extends BaseModel {
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
-  declare createdByEventId: bigint | number
+  declare createdByEventId: number
   @column({ isPrimary: true })
-  declare id: bigint | number
+  declare id: number
   @column()
   declare sourceApp: string
   @column()
@@ -114,20 +114,16 @@ export class SojalinkEntityCorrelationSchema extends BaseModel {
 }
 
 export class SojalinkEventSchema extends BaseModel {
-  static $columns = ['appliedRuleVersionId', 'correlationKey', 'createdAt', 'eventTypeId', 'id', 'occurredAt', 'payloadJson', 'processedAt', 'processingStartedAt', 'resolutionSnapshotJson', 'sourceApp', 'sourceEntityId', 'sourceEntityType', 'sourceEventId', 'status', 'updatedAt'] as const
+  static $columns = ['appliedRuleVersionId', 'createdAt', 'eventTypeId', 'id', 'payloadJson', 'processedAt', 'processingStartedAt', 'resolutionSnapshotJson', 'sourceApp', 'sourceEntityId', 'sourceEntityType', 'status', 'updatedAt'] as const
   $columns = SojalinkEventSchema.$columns
   @column()
-  declare appliedRuleVersionId: bigint | number
-  @column()
-  declare correlationKey: string
+  declare appliedRuleVersionId: number
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
-  declare eventTypeId: bigint | number
+  declare eventTypeId: number
   @column({ isPrimary: true })
-  declare id: bigint | number
-  @column.dateTime()
-  declare occurredAt: DateTime
+  declare id: number
   @column()
   declare payloadJson: string
   @column.dateTime()
@@ -143,8 +139,6 @@ export class SojalinkEventSchema extends BaseModel {
   @column()
   declare sourceEntityType: string
   @column()
-  declare sourceEventId: string | null
-  @column()
   declare status: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
@@ -158,7 +152,7 @@ export class SojalinkEventTypeSchema extends BaseModel {
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column({ isPrimary: true })
-  declare id: bigint | number
+  declare id: number
   @column()
   declare isActive: boolean
   @column()
@@ -175,9 +169,9 @@ export class SojalinkRuleSchema extends BaseModel {
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
-  declare eventTypeId: bigint | number
+  declare eventTypeId: number
   @column({ isPrimary: true })
-  declare id: bigint | number
+  declare id: number
   @column()
   declare isActive: boolean
   @column()
@@ -196,13 +190,13 @@ export class SojalinkRuleVersionSchema extends BaseModel {
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column({ isPrimary: true })
-  declare id: bigint | number
+  declare id: number
   @column()
   declare isActive: boolean
   @column()
   declare pipelineJson: string
   @column()
-  declare ruleId: bigint | number
+  declare ruleId: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
   @column()
@@ -213,7 +207,7 @@ export class SojalinkStepLogSchema extends BaseModel {
   static $columns = ['attemptId', 'errorCode', 'errorMessage', 'finishedAt', 'handlerKey', 'id', 'inputJson', 'outputJson', 'startedAt', 'status', 'stepCode', 'stepIndex'] as const
   $columns = SojalinkStepLogSchema.$columns
   @column()
-  declare attemptId: bigint | number
+  declare attemptId: number
   @column()
   declare errorCode: string | null
   @column()
@@ -223,7 +217,7 @@ export class SojalinkStepLogSchema extends BaseModel {
   @column()
   declare handlerKey: string
   @column({ isPrimary: true })
-  declare id: bigint | number
+  declare id: number
   @column()
   declare inputJson: string
   @column()

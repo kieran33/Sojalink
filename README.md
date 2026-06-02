@@ -105,7 +105,7 @@ Les deux bases de données sont créées automatiquement par un conteneur MariaD
 ## Lancer le conteneur Docker
 
 ```bash
-docker compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 > Le flag `-f` est nécessaire car le fichier ne porte pas le nom par défaut (`docker-compose.yml`) attendu par Docker.
@@ -114,7 +114,7 @@ docker compose -f docker-compose.dev.yml up
 
 ```bash
 docker compose -f docker-compose.dev.yml down -v
-docker compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 > Le flag `-v` supprime les volumes associés au conteneur, ce qui efface les données. À n'utiliser que si le script SQL d'init.sql a changé.
@@ -211,3 +211,75 @@ Pour repartir d'une base propre avant de relancer les seeders :
 node ace db:truncate
 node ace db:seed
 ```
+
+## Le worker de polling
+
+### Rôle
+
+Le worker de polling est responsable de consommer les événements en attente dans la table `sojalink_events`. Il tourne en arrière-plan en parallèle du serveur web et traite les événements un par un de façon fiable.
+
+---
+
+### Fonctionnement général
+
+Le worker repose sur le package `@adonisjs/queue` qui fournit un système de file d'attente (queue) basé sur la base de données.
+
+Le flux complet est le suivant :
+
+1. Le **scheduler** planifie le job `PollPendingEventsJob` toutes les 10 secondes.
+2. Le **worker queue** récupère ce job depuis la queue `pending_events` et exécute `PendingEventsWorker`.
+3. `PendingEventsWorker` délègue au use case `ProcessNextPendingEvent`.
+4. Le use case demande au repository de réserver le premier événement `pending`.
+5. Si un événement est trouvé, il est réservé atomiquement et passe en `processing`.
+6. Si aucun événement n'est disponible, le cycle se termine sans modification.
+
+---
+
+### Architecture des fichiers
+
+| Fichier | Rôle |
+|---|---|
+| `app/jobs/poll_pending_events_job.ts` | Job Adonis Queue dispatché par le scheduler |
+| `app/application/events/pending_events_worker.ts` | Point d'entrée applicatif appelé par le job |
+| `app/application/events/process_next_pending_event.ts` | Orchestration de la réservation, du traitement et de la mise à jour du statut |
+| `app/application/events/event_processor.ts` | Stub du futur traitement métier de l'événement |
+| `app/persistence/events/event_repository.ts` | Réservation atomique du prochain événement `pending` |
+| `start/scheduler.ts` | Planifie le job toutes les 10 secondes hors environnement `test` |
+
+---
+
+### Réservation atomique
+
+Pour éviter que deux workers ne traitent le même événement simultanément, la récupération et la réservation sont effectuées en une seule transaction SQL avec `FOR UPDATE SKIP LOCKED` :
+
+```sql
+SELECT * FROM sojalink_events
+WHERE status = 'pending'
+ORDER BY created_at ASC
+LIMIT 1
+FOR UPDATE SKIP LOCKED
+```
+
+`FOR UPDATE` verrouille la ligne sélectionnée pendant la transaction. `SKIP LOCKED` permet aux autres workers d'ignorer les lignes déjà verrouillées au lieu d'attendre.
+
+---
+
+### Lancer le worker manuellement
+
+```bash
+node ace queue:work --queue=pending_events
+```
+
+En développement avec Docker, le worker démarre automatiquement avec le serveur :
+
+```bash
+docker compose -f docker-compose.dev.yml up
+```
+
+---
+
+### Lister les schedulers actifs
+
+```bash
+node ace queue:scheduler:list
+``` 

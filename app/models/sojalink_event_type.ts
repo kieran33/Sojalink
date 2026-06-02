@@ -1,8 +1,8 @@
 import { SojalinkEventTypeSchema } from '#database/schema'
 import { hasMany } from '@adonisjs/lucid/orm'
-import SojalinkEvent from './sojalink_event.ts'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
-import SojalinkRule from './sojalink_rule.ts'
+import SojalinkEvent from '#models/sojalink_event'
+import SojalinkRule from '#models/sojalink_rule'
 
 export default class SojalinkEventType extends SojalinkEventTypeSchema {
   @hasMany(() => SojalinkEvent)

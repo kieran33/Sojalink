@@ -5,12 +5,12 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
-      table.bigIncrements('id')
+      table.increments('id')
       table.string('code').notNullable().index()
       table.string('label').notNullable().index()
-      table.boolean('is_active').notNullable().index()
-      table.datetime('created_at').notNullable()
-      table.datetime('updated_at').nullable()
+      table.boolean('is_active').notNullable().defaultTo(true).index()
+      table.timestamp('created_at').notNullable().defaultTo(this.now())
+      table.timestamp('updated_at').nullable()
     })
   }
 

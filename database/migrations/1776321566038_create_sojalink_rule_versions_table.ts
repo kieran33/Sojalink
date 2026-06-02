@@ -5,9 +5,9 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
-      table.bigIncrements('id')
+      table.increments('id')
       table
-        .bigInteger('rule_id')
+        .integer('rule_id')
         .unsigned()
         .references('id')
         .inTable('sojalink_rules')
@@ -17,8 +17,8 @@ export default class extends BaseSchema {
       table.boolean('is_active').notNullable().index()
       table.json('conditions_json').notNullable()
       table.json('pipeline_json').notNullable()
-      table.datetime('created_at').notNullable()
-      table.datetime('updated_at').nullable()
+      table.timestamp('created_at').notNullable().defaultTo(this.now())
+      table.timestamp('updated_at').nullable()
     })
   }
 

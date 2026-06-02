@@ -1,10 +1,10 @@
 import { SojalinkEventSchema } from '#database/schema'
 import { belongsTo, hasMany } from '@adonisjs/lucid/orm'
-import SojalinkAttempt from './sojalink_attempt.ts'
 import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
-import SojalinkEntityCorrelation from './sojalink_entity_correlation.ts'
-import SojalinkRuleVersion from './sojalink_rule_version.ts'
-import SojalinkEventType from './sojalink_event_type.ts'
+import SojalinkAttempt from '#models/sojalink_attempt'
+import SojalinkEntityCorrelation from '#models/sojalink_entity_correlation'
+import SojalinkRuleVersion from '#models/sojalink_rule_version'
+import SojalinkEventType from '#models/sojalink_event_type'
 
 export default class SojalinkEvent extends SojalinkEventSchema {
   @hasMany(() => SojalinkAttempt)

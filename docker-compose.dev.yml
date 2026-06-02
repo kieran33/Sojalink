@@ -1,7 +1,5 @@
-version: "3.9"
-
 services:
-  database: 
+  database:
     image: mariadb:latest
     container_name: MariaDB_container
     environment:
@@ -12,3 +10,8 @@ services:
       - ./init-db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "3306:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

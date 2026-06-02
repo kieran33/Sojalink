@@ -1,7 +1,7 @@
 import { SojalinkEntityCorrelationSchema } from '#database/schema'
 import { belongsTo } from '@adonisjs/lucid/orm'
-import SojalinkEvent from './sojalink_event.ts'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
+import SojalinkEvent from '#models/sojalink_event'
 
 export default class SojalinkEntityCorrelation extends SojalinkEntityCorrelationSchema {
   @belongsTo(() => SojalinkEvent)

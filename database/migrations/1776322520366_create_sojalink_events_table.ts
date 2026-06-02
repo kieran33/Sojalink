@@ -5,9 +5,9 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
-      table.bigIncrements('id')
+      table.increments('id')
       table
-        .bigInteger('event_type_id')
+        .integer('event_type_id')
         .unsigned()
         .references('id')
         .inTable('sojalink_event_types')
@@ -16,23 +16,23 @@ export default class extends BaseSchema {
       table.string('source_app').notNullable().index()
       table.string('source_entity_type').notNullable()
       table.string('source_entity_id').notNullable()
-      table.string('source_event_id').nullable()
-      table.string('correlation_key').notNullable().unique()
+      table.unique(['source_app', 'source_entity_type', 'source_entity_id', 'event_type_id'], {
+        indexName: 'sojalink_events_unique_source_event',
+      })
       table.string('status').notNullable().index()
       table.json('payload_json').notNullable()
       table
-        .bigInteger('applied_rule_version_id')
+        .integer('applied_rule_version_id')
         .unsigned()
         .references('id')
         .inTable('sojalink_rule_versions')
         .notNullable()
         .index()
       table.json('resolution_snapshot_json').notNullable()
-      table.datetime('created_at').notNullable()
-      table.datetime('updated_at').nullable()
-      table.datetime('occurred_at').notNullable()
-      table.datetime('processing_started_at').nullable()
-      table.datetime('processed_at').nullable()
+      table.timestamp('created_at').notNullable().defaultTo(this.now()).index()
+      table.timestamp('updated_at').nullable()
+      table.timestamp('processing_started_at').nullable()
+      table.timestamp('processed_at').nullable()
     })
   }
 
