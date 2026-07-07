@@ -6,6 +6,7 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
+
       table
         .integer('event_id')
         .unsigned()
@@ -13,12 +14,17 @@ export default class extends BaseSchema {
         .inTable('sojalink_events')
         .notNullable()
         .index()
-      table.integer('attempt_number').notNullable().index()
+
+      table.integer('attempt_number').notNullable()
       table.string('status').notNullable().index()
       table.string('error_code').nullable()
       table.text('error_message').nullable()
-      table.timestamp('started_at').notNullable().defaultTo(this.now())
-      table.timestamp('finished_at').nullable()
+      table.datetime('started_at').notNullable().defaultTo(this.now())
+      table.datetime('finished_at').nullable()
+
+      table.unique(['event_id', 'attempt_number'], {
+        indexName: 'sojalink_attempts_unique_event_attempt',
+      })
     })
   }
 

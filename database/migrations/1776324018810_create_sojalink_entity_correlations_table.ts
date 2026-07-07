@@ -20,8 +20,8 @@ export default class extends BaseSchema {
         .inTable('sojalink_events')
         .notNullable()
         .index()
-      table.timestamp('created_at').notNullable().defaultTo(this.now())
-      table.timestamp('updated_at').nullable()
+      table.datetime('created_at').notNullable().defaultTo(this.now())
+      table.datetime('updated_at').nullable()
 
       table.unique(
         [

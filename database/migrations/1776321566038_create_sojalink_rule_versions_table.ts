@@ -6,6 +6,7 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
+
       table
         .integer('rule_id')
         .unsigned()
@@ -13,12 +14,18 @@ export default class extends BaseSchema {
         .inTable('sojalink_rules')
         .notNullable()
         .index()
-      table.integer('version_number').notNullable().index()
-      table.boolean('is_active').notNullable().index()
+
+      table.integer('version_number').notNullable()
+      table.boolean('is_active').notNullable().defaultTo(false).index()
       table.json('conditions_json').notNullable()
       table.json('pipeline_json').notNullable()
-      table.timestamp('created_at').notNullable().defaultTo(this.now())
-      table.timestamp('updated_at').nullable()
+
+      table.datetime('created_at').notNullable().defaultTo(this.now())
+      table.datetime('updated_at').nullable()
+
+      table.unique(['rule_id', 'version_number'], {
+        indexName: 'sojalink_rule_versions_unique_rule_version',
+      })
     })
   }
 

@@ -6,6 +6,7 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
+
       table
         .integer('attempt_id')
         .unsigned()
@@ -13,7 +14,8 @@ export default class extends BaseSchema {
         .inTable('sojalink_attempts')
         .notNullable()
         .index()
-      table.integer('step_index').notNullable().index()
+
+      table.integer('step_index').notNullable()
       table.string('step_code').notNullable().index()
       table.string('handler_key').notNullable()
       table.string('status').notNullable().index()
@@ -21,8 +23,12 @@ export default class extends BaseSchema {
       table.json('output_json').nullable()
       table.string('error_code').nullable()
       table.text('error_message').nullable()
-      table.timestamp('started_at').notNullable().defaultTo(this.now())
-      table.timestamp('finished_at').nullable()
+      table.datetime('started_at').notNullable().defaultTo(this.now())
+      table.datetime('finished_at').nullable()
+
+      table.unique(['attempt_id', 'step_index'], {
+        indexName: 'sojalink_step_logs_unique_attempt_step',
+      })
     })
   }
 

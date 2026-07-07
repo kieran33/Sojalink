@@ -1,15 +1,36 @@
-import type { ProcessingEvent } from '#domain/events/event'
+import { inject } from '@adonisjs/core'
+import logger from '@adonisjs/core/services/logger'
+import { EventRepository } from '#persistence/events/event_repository'
+import { EventWorkflow } from '#application/events/event_workflow'
 
+@inject()
 export class EventProcessor {
-  async process(_event: ProcessingEvent): Promise<void> {
-    /**
-     * TODO:
-     * - Identifier le type d’event
-     * - Charger les règles applicables
-     * - Résoudre la version de règle à appliquer
-     * - Exécuter l’action associée
-     */
+  constructor(
+    private eventRepository: EventRepository,
+    private eventWorkflow: EventWorkflow
+  ) {}
 
-    return
+  async process(): Promise<void> {
+    const event = await this.eventRepository.reserveNextPendingEvent()
+
+    if (!event) {
+      logger.debug('No pending event available')
+      return
+    }
+
+    logger.info({ event: event }, 'Pending event reserved for processing')
+
+    try {
+      await this.eventWorkflow.run(event)
+      await this.eventRepository.markEventAsProcessed(event.id)
+
+      logger.info({ event: event }, 'Event processed successfully')
+    } catch (error) {
+      await this.eventRepository.markEventAsFailed(event.id)
+
+      logger.error({ err: error, event: event }, 'Pending event processing failed')
+
+      throw error
+    }
   }
 }

@@ -1,11 +1,11 @@
 import { inject } from '@adonisjs/core'
-import { ProcessNextPendingEvent } from '#application/events/process_next_pending_event'
+import { EventProcessor } from '#application/events/event_processor'
 
 @inject()
 export class PendingEventsWorker {
-  constructor(private processNextPendingEventUseCase: ProcessNextPendingEvent) {}
+  constructor(private eventProcessor: EventProcessor) {}
 
   async handle(): Promise<void> {
-    await this.processNextPendingEventUseCase.handle()
+    await this.eventProcessor.process()
   }
 }
