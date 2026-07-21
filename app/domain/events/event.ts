@@ -6,8 +6,9 @@ export type ProcessingEvent = {
   eventTypeId: number
   sourceApp: string
   sourceEntityType: string
-  sourceEntityId: string
-  payload: string
+  sourceEntityId: number
+  payloadJson: string
   createdAt: DateTime
   processingStartedAt: DateTime
+  appliedRuleVersionId: number | null
 }

@@ -50,9 +50,10 @@ export class EventRepository {
       sourceApp: event.sourceApp,
       sourceEntityType: event.sourceEntityType,
       sourceEntityId: event.sourceEntityId,
-      payload: event.payloadJson,
+      payloadJson: event.payloadJson,
       createdAt: event.createdAt,
       processingStartedAt: event.processingStartedAt,
+      appliedRuleVersionId: event.appliedRuleVersionId,
     }
   }
 }

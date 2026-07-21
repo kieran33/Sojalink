@@ -139,7 +139,7 @@ Exemple :
 Cette règle est applicable uniquement si :
 
 * l’événement vient de `SojadisPro`
-* et le champ `payload.status` vaut `paid`
+* et le champ `payload.status` vaut `received`
 
 Si une seule condition échoue, l’ensemble retourne `false`.
 

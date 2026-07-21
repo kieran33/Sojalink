@@ -8,10 +8,10 @@ export default class extends BaseSchema {
       table.increments('id')
       table.string('source_app').notNullable()
       table.string('source_entity_type').notNullable()
-      table.string('source_entity_id').notNullable()
+      table.integer('source_entity_id').notNullable()
       table.string('target_app').notNullable()
       table.string('target_entity_type').notNullable()
-      table.string('target_entity_id').notNullable()
+      table.integer('target_entity_id').notNullable()
       table.string('correlation_key').notNullable().unique()
       table
         .integer('created_by_event_id')

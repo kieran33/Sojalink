@@ -11,8 +11,20 @@ export default class SojalinkRuleVersionSeeder extends BaseSeeder {
         ruleId: rule.id,
         versionNumber: 1,
         isActive: true,
-        conditionsJson: JSON.stringify({ id: 1, name: 'test' }),
-        pipelineJson: JSON.stringify({ id: 1, name: 'test' }),
+        conditionsJson: JSON.stringify([
+          {
+            conditions: [{ field: 'source_app', operator: 'eq', value: 'SojadisPro' }],
+          },
+          {
+            conditions: [{ field: 'source_app', operator: 'eq', value: `Toki` }],
+          },
+        ]),
+        pipelineJson: JSON.stringify({
+          steps: [
+            { key: 'step-1', handler: 'create_toki_task' },
+            { key: 'step-2', handler: 'send_notification' },
+          ],
+        }),
       },
     ])
   }

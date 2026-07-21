@@ -17,7 +17,7 @@ export default class extends BaseSchema {
 
       table.string('source_app').notNullable().index()
       table.string('source_entity_type').notNullable()
-      table.string('source_entity_id').notNullable()
+      table.integer('source_entity_id').notNullable()
 
       table.unique(['source_app', 'source_entity_type', 'source_entity_id', 'event_type_id'], {
         indexName: 'sojalink_events_unique_source_event',

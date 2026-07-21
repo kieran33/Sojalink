@@ -100,13 +100,13 @@ export class SojalinkEntityCorrelationSchema extends BaseModel {
   @column()
   declare sourceApp: string
   @column()
-  declare sourceEntityId: string
+  declare sourceEntityId: number
   @column()
   declare sourceEntityType: string
   @column()
   declare targetApp: string
   @column()
-  declare targetEntityId: string
+  declare targetEntityId: number
   @column()
   declare targetEntityType: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
@@ -143,7 +143,7 @@ export class SojalinkEventSchema extends BaseModel {
   @column()
   declare sourceApp: string
   @column()
-  declare sourceEntityId: string
+  declare sourceEntityId: number
   @column()
   declare sourceEntityType: string
   @column()
