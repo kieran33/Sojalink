@@ -4,7 +4,8 @@ import SojalinkEventType from '#models/sojalink_event_type'
 
 export default class SojalinkEventSeeder extends BaseSeeder {
   async run() {
-    const eventType = await SojalinkEventType.query().orderBy('id', 'desc').firstOrFail()
+    const eventType = await SojalinkEventType.findByOrFail('code', 'sojadispro.order.created')
+
     await SojalinkEvent.updateOrCreateMany(
       ['sourceApp', 'sourceEntityType', 'sourceEntityId', 'eventTypeId'],
       [

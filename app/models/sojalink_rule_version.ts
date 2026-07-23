@@ -5,9 +5,9 @@ import SojalinkEvent from '#models/sojalink_event'
 import SojalinkRule from '#models/sojalink_rule'
 
 export default class SojalinkRuleVersion extends SojalinkRuleVersionSchema {
-  @hasMany(() => SojalinkEvent)
-  declare sojalink_events: HasMany<typeof SojalinkEvent>
+  @hasMany(() => SojalinkEvent, { foreignKey: 'appliedRuleVersionId' })
+  declare appliedEvents: HasMany<typeof SojalinkEvent>
 
-  @belongsTo(() => SojalinkRule)
-  declare sojalink_rules: BelongsTo<typeof SojalinkRule>
+  @belongsTo(() => SojalinkRule, { foreignKey: 'ruleId' })
+  declare rule: BelongsTo<typeof SojalinkRule>
 }

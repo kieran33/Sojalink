@@ -3,6 +3,14 @@ import logger from '@adonisjs/core/services/logger'
 import { EventRepository } from '#persistence/events/event_repository'
 import { EventWorkflow } from '#application/events/event_workflow'
 
+/**
+ * Entry point of one polling tick: reserves the next pending event, runs
+ * the workflow and owns the final event status (processed | failed).
+ *
+ * A failed event is a business outcome, already traced in the event,
+ * attempt and step logs — it is logged but not rethrown, so the polling
+ * job itself does not fail.
+ */
 @inject()
 export class EventProcessor {
   constructor(
@@ -18,19 +26,17 @@ export class EventProcessor {
       return
     }
 
-    logger.info({ event: event }, 'Pending event reserved for processing')
+    logger.info({ eventId: event.id }, 'Pending event reserved for processing')
 
     try {
       await this.eventWorkflow.run(event)
       await this.eventRepository.markEventAsProcessed(event.id)
 
-      logger.info({ event: event }, 'Event processed successfully')
+      logger.info({ eventId: event.id }, 'Event processed successfully')
     } catch (error) {
       await this.eventRepository.markEventAsFailed(event.id)
 
-      logger.error({ err: error, event: event }, 'Pending event processing failed')
-
-      throw error
+      logger.error({ err: error, eventId: event.id }, 'Event processing failed')
     }
   }
 }

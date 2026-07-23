@@ -1,64 +1,86 @@
 import { inject } from '@adonisjs/core'
 import logger from '@adonisjs/core/services/logger'
-import { RuleRepository } from '#persistence/events/rule_repository'
+import { DateTime } from 'luxon'
+import type { ProcessingEvent } from '#domain/events/event'
+import {
+  MultipleMatchingRulesError,
+  NoMatchingRuleError,
+  RuleResolutionError,
+} from '#domain/events/errors'
 import { evaluateRuleConditions } from '#application/events/evaluate_rule_conditions'
+import { EventRepository } from '#persistence/events/event_repository'
+import { RuleRepository } from '#persistence/events/rule_repository'
 
+export type RuleResolution = {
+  ruleVersionId: number
+}
+
+/**
+ * Picks the single winning rule version for an event (strict V1):
+ * - 0 matching rule -> NoMatchingRuleError
+ * - several matching rules with the same best priority -> MultipleMatchingRulesError
+ * - exactly 1 winner -> resolution persisted on the event
+ * The lowest priority number wins.
+ */
 @inject()
 export class RuleResolver {
-  constructor(private ruleRepository: RuleRepository) {}
+  constructor(
+    private ruleRepository: RuleRepository,
+    private eventRepository: EventRepository
+  ) {}
 
-  async resolve(eventId: number): Promise<void> {
-    const event = await this.ruleRepository.findProcessingEvent(eventId)
+  async resolve(event: ProcessingEvent): Promise<RuleResolution> {
+    const rules = await this.ruleRepository.findActiveRulesWithLatestActiveVersion(
+      event.eventTypeId
+    )
 
-    if (!event) {
-      throw new Error(`Event ${eventId} is not processing`)
+    const conditionsContext = {
+      sourceApp: event.sourceApp,
+      sourceEntityType: event.sourceEntityType,
+      sourceEntityId: event.sourceEntityId,
+      payload: event.payload,
     }
 
-    const rules = await this.ruleRepository.findActiveRulesWithActiveVersions(event.eventTypeId)
-    const payload = JSON.parse(event.payloadJson)
+    const matchingRules = rules.filter((rule) =>
+      evaluateRuleConditions(rule.version.conditions, conditionsContext)
+    )
 
-    const matchingVersions = []
-
-    for (const rule of rules) {
-      for (const version of rule.versions) {
-        const conditions = JSON.parse(version.conditionsJson)
-
-        const isMatching = evaluateRuleConditions(conditions, {
-          sourceApp: event.sourceApp,
-          sourceEntityType: event.sourceEntityType,
-          sourceEntityId: event.sourceEntityId,
-          payload,
-        })
-
-        if (isMatching) {
-          matchingVersions.push({ rule, version })
-        }
-      }
+    if (matchingRules.length === 0) {
+      return this.fail(event, new NoMatchingRuleError(`No rule matches event ${event.id}`))
     }
 
-    if (matchingVersions.length === 0) {
-      logger.warn({ eventId }, 'No rule found')
-      throw new Error(`No rule found for event ${eventId}`)
-    }
-
-    const bestPriority = Math.min(...matchingVersions.map((match) => match.rule.priority))
-    const winners = matchingVersions.filter((match) => match.rule.priority === bestPriority)
+    const bestPriority = Math.min(...matchingRules.map((rule) => rule.priority))
+    const winners = matchingRules.filter((rule) => rule.priority === bestPriority)
 
     if (winners.length > 1) {
-      logger.error({ eventId }, 'Several rules found')
-      throw new Error(`Several rules found for event ${eventId}`)
+      return this.fail(
+        event,
+        new MultipleMatchingRulesError(
+          `${winners.length} rules match event ${event.id} with priority ${bestPriority}`
+        )
+      )
     }
 
     const winner = winners[0]
 
-    await this.ruleRepository.saveResolution(event.id, winner.version.id, {
-      ruleId: winner.rule.id,
-      ruleCode: winner.rule.code,
+    await this.eventRepository.saveResolution(event.id, winner.version.id, {
+      ruleId: winner.id,
+      ruleCode: winner.code,
       ruleVersionId: winner.version.id,
-      priority: winner.rule.priority,
-      resolvedAt: new Date().toISOString(),
+      priority: winner.priority,
+      resolvedAt: DateTime.utc().toISO(),
     })
 
-    logger.info({ eventId, ruleVersionId: winner.version.id }, 'Rule resolved')
+    logger.info({ eventId: event.id, ruleVersionId: winner.version.id }, 'Rule resolved')
+
+    return { ruleVersionId: winner.version.id }
+  }
+
+  private async fail(event: ProcessingEvent, error: RuleResolutionError): Promise<never> {
+    await this.eventRepository.saveResolutionFailure(event.id, error.name, error.message)
+
+    logger.warn({ eventId: event.id, errorCode: error.name }, error.message)
+
+    throw error
   }
 }

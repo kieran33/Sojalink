@@ -212,7 +212,7 @@ export class SojalinkRuleVersionSchema extends BaseModel {
 }
 
 export class SojalinkStepLogSchema extends BaseModel {
-  static $columns = ['attemptId', 'errorCode', 'errorMessage', 'finishedAt', 'handlerKey', 'id', 'inputJson', 'outputJson', 'startedAt', 'status', 'stepCode', 'stepIndex'] as const
+  static $columns = ['attemptId', 'errorCode', 'errorMessage', 'finishedAt', 'handlerName', 'id', 'inputJson', 'outputJson', 'startedAt', 'status', 'stepCode', 'stepIndex'] as const
   $columns = SojalinkStepLogSchema.$columns
   @column()
   declare attemptId: number
@@ -223,7 +223,7 @@ export class SojalinkStepLogSchema extends BaseModel {
   @column.dateTime()
   declare finishedAt: DateTime | null
   @column()
-  declare handlerKey: string
+  declare handlerName: string
   @column({ isPrimary: true })
   declare id: number
   @column()

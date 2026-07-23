@@ -1,14 +1,13 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import testUtils from '@adonisjs/core/services/test_utils'
 import { DateTime } from 'luxon'
 import SojalinkEventTypeSeeder from '#database/seeders/sojalink_event_type_seeder'
 import SojalinkRuleSeeder from '#database/seeders/sojalink_rule_seeder'
 import SojalinkRuleVersionSeeder from '#database/seeders/sojalink_rule_version_seeder'
 import SojalinkEvent from '#models/sojalink_event'
 import { EventRepository } from '#persistence/events/event_repository'
-import PollPendingEventsJob from '../../app/jobs/poll_pending_events_job.js'
-import { shouldSchedulePolling } from '../../start/scheduler.js'
+import PollPendingEventsJob from '#jobs/poll_pending_events_job'
+import { shouldSchedulePolling } from '#start/scheduler'
 
 type EventDependencies = {
   eventTypeId: number
@@ -52,11 +51,11 @@ async function createSojalinkEvent(
     processedAt: DateTime | null
     processingStartedAt: DateTime | null
     createdAt: DateTime
-    sourceEntityId: string
+    sourceEntityId: number
     status: string
   }> = {}
 ) {
-  const sourceEntityId = attributes.sourceEntityId ?? `worksheet-${Date.now()}-${Math.random()}`
+  const sourceEntityId = attributes.sourceEntityId ?? Math.floor(Math.random() * 100000)
 
   const event = new SojalinkEvent()
 
@@ -81,7 +80,15 @@ async function createSojalinkEvent(
 }
 
 test.group('EventRepository.reserveNextPendingEvent', (group) => {
-  group.each.setup(() => testUtils.db().wrapInGlobalTransaction())
+  group.each.setup(async () => {
+    await db.from('sojalink_step_logs').delete()
+    await db.from('sojalink_attempts').delete()
+    await db.from('sojalink_entity_correlations').delete()
+    await db.from('sojalink_events').delete()
+    await db.from('sojalink_rule_versions').delete()
+    await db.from('sojalink_rules').delete()
+    await db.from('sojalink_event_types').delete()
+  })
 
   test('returns null when there is no pending event', async ({ assert }) => {
     const reservedEvent = await new EventRepository().reserveNextPendingEvent()
@@ -93,7 +100,7 @@ test.group('EventRepository.reserveNextPendingEvent', (group) => {
     const dependencies = await seedEventDependencies()
 
     const event = await createSojalinkEvent(dependencies, {
-      sourceEntityId: 'worksheet-to-reserve',
+      sourceEntityId: 1,
     })
 
     const reservedEvent = await new EventRepository().reserveNextPendingEvent()
@@ -109,8 +116,8 @@ test.group('EventRepository.reserveNextPendingEvent', (group) => {
       eventTypeId: dependencies.eventTypeId,
       sourceApp: 'sojadispro',
       sourceEntityType: 'worksheet',
-      sourceEntityId: 'worksheet-to-reserve',
-      payload: JSON.stringify({ id: 'worksheet-to-reserve' }),
+      sourceEntityId: 1,
+      payload: { id: 1 },
     })
 
     assert.equal(reservedEvent?.createdAt.toISO(), event.createdAt.toISO())
@@ -122,20 +129,20 @@ test.group('EventRepository.reserveNextPendingEvent', (group) => {
     const processingStartedAt = DateTime.utc(2026, 1, 1)
 
     await createSojalinkEvent(dependencies, {
-      sourceEntityId: 'processing-event',
+      sourceEntityId: 4,
       processingStartedAt,
       status: 'processing',
     })
 
     await createSojalinkEvent(dependencies, {
-      sourceEntityId: 'processed-event',
+      sourceEntityId: 5,
       processedAt: DateTime.utc(2026, 1, 2),
       processingStartedAt,
       status: 'processed',
     })
 
     await createSojalinkEvent(dependencies, {
-      sourceEntityId: 'failed-event',
+      sourceEntityId: 6,
       processingStartedAt,
       status: 'failed',
     })
@@ -149,12 +156,12 @@ test.group('EventRepository.reserveNextPendingEvent', (group) => {
     const dependencies = await seedEventDependencies()
 
     await createSojalinkEvent(dependencies, {
-      sourceEntityId: 'newer-event',
+      sourceEntityId: 2,
       createdAt: DateTime.utc(2026, 1, 2),
     })
 
     const olderEvent = await createSojalinkEvent(dependencies, {
-      sourceEntityId: 'older-event',
+      sourceEntityId: 3,
       createdAt: DateTime.utc(2026, 1, 1),
     })
 
@@ -165,7 +172,7 @@ test.group('EventRepository.reserveNextPendingEvent', (group) => {
     const pendingEvents = await SojalinkEvent.query().where('status', 'pending')
 
     assert.lengthOf(pendingEvents, 1)
-    assert.equal(pendingEvents[0].sourceEntityId, 'newer-event')
+    assert.equal(pendingEvents[0].sourceEntityId, 2)
   })
 
   test('does not reserve the same event twice under concurrency', async ({ assert }) => {

@@ -28,7 +28,7 @@ test.group('Sojalink initial seed', (group) => {
       .from('sojalink_events')
       .where('source_app', 'SojadisPro')
       .where('source_entity_type', 'worksheet')
-      .where('source_entity_id', 'worksheet-test')
+      .where('source_entity_id', 95)
 
     assert.lengthOf(eventTypes, 1)
     assert.lengthOf(rules, 1)
@@ -53,7 +53,7 @@ test.group('Sojalink initial seed', (group) => {
       .from('sojalink_events')
       .where('source_app', 'SojadisPro')
       .where('source_entity_type', 'worksheet')
-      .where('source_entity_id', 'worksheet-test')
+      .where('source_entity_id', 95)
       .first()
 
     assert.exists(eventType)
@@ -65,7 +65,7 @@ test.group('Sojalink initial seed', (group) => {
     assert.equal(ruleVersion.version_number, 1)
     assert.equal(ruleVersion.is_active, 1)
     assert.equal(event.event_type_id, eventType.id)
-    assert.equal(event.applied_rule_version_id, ruleVersion.id)
+    assert.isNull(event.applied_rule_version_id)
     assert.equal(event.status, 'pending')
   })
 })

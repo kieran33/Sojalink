@@ -5,9 +5,9 @@ import SojalinkStepLog from '#models/sojalink_step_log'
 import SojalinkEvent from '#models/sojalink_event'
 
 export default class SojalinkAttempt extends SojalinkAttemptSchema {
-  @hasMany(() => SojalinkStepLog)
-  declare sojalink_step_logs: HasMany<typeof SojalinkStepLog>
+  @hasMany(() => SojalinkStepLog, { foreignKey: 'attemptId' })
+  declare stepLogs: HasMany<typeof SojalinkStepLog>
 
-  @belongsTo(() => SojalinkEvent)
-  declare sojalink_events: BelongsTo<typeof SojalinkEvent>
+  @belongsTo(() => SojalinkEvent, { foreignKey: 'eventId' })
+  declare event: BelongsTo<typeof SojalinkEvent>
 }

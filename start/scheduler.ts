@@ -1,9 +1,9 @@
-import PollEventsJob from '../app/jobs/poll_pending_events_job.js'
+import PollPendingEventsJob from '#jobs/poll_pending_events_job'
 
 export function shouldSchedulePolling(nodeEnv = process.env.NODE_ENV) {
   return nodeEnv !== 'test'
 }
 
 if (shouldSchedulePolling()) {
-  await PollEventsJob.schedule({}).every('10s')
+  await PollPendingEventsJob.schedule({}).every('10s')
 }

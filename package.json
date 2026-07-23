@@ -22,6 +22,7 @@
     "#domain/*": "./app/domain/*.js",
     "#persistence/*": "./app/persistence/*.js",
     "#exceptions/*": "./app/exceptions/*.js",
+    "#jobs/*": "./app/jobs/*.js",
     "#models/*": "./app/models/*.js",
     "#mails/*": "./app/mails/*.js",
     "#services/*": "./app/services/*.js",
@@ -64,7 +65,6 @@
     "youch": "^4.1.1"
   },
   "dependencies": {
-    "@adonisjs/auth": "^10.1.0",
     "@adonisjs/core": "^7.3.1",
     "@adonisjs/cors": "^3.0.0",
     "@adonisjs/inertia": "^4.2.0",

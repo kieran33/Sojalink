@@ -1,13 +1,9 @@
-import type { RuleVersion } from '#domain/events/rule_version'
 import SojalinkRuleVersion from '#models/sojalink_rule_version'
+import type { RuleVersion } from '#domain/events/rule_version'
 
 export class RuleVersionRepository {
-  async findPipelineByRuleVersion(ruleVersionId: number): Promise<RuleVersion | null> {
-    const ruleVersion = await SojalinkRuleVersion.query()
-      .where('id', ruleVersionId)
-      .whereNotNull('pipeline_json')
-      .where('pipeline_json', '!=', '')
-      .first()
+  async findById(ruleVersionId: number): Promise<RuleVersion | null> {
+    const ruleVersion = await SojalinkRuleVersion.find(ruleVersionId)
 
     if (!ruleVersion) {
       return null

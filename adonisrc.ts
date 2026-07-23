@@ -58,7 +58,6 @@ export default defineConfig({
     () => import('@adonisjs/lucid/database_provider'),
     () => import('@adonisjs/cors/cors_provider'),
     () => import('@adonisjs/inertia/inertia_provider'),
-    () => import('@adonisjs/auth/auth_provider'),
     () => import('@adonisjs/queue/queue_provider'),
   ],
 
@@ -74,7 +73,13 @@ export default defineConfig({
     () => import('#start/routes'),
     () => import('#start/kernel'),
     () => import('#start/validator'),
-    () => import('#start/scheduler'),
+    {
+      // Registers the polling schedule in the queue tables: only relevant
+      // when the HTTP server boots, and must not run during ace commands
+      // (a fresh database has no queue tables before migration:run).
+      file: () => import('#start/scheduler'),
+      environment: ['web'],
+    },
   ],
 
   /*

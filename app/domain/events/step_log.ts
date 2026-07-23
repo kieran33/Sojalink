@@ -1,12 +1,14 @@
 import type { DateTime } from 'luxon'
 
+export type StepLogStatus = 'success' | 'failed'
+
 export type StepLog = {
   id: number
   attemptId: number
   stepIndex: number
   stepCode: string
-  handlerKey: string
-  status: string
+  handlerName: string
+  status: StepLogStatus
   inputJson: string
   outputJson: string | null
   errorCode: string | null

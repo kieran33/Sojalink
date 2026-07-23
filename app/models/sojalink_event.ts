@@ -7,15 +7,15 @@ import SojalinkRuleVersion from '#models/sojalink_rule_version'
 import SojalinkEventType from '#models/sojalink_event_type'
 
 export default class SojalinkEvent extends SojalinkEventSchema {
-  @hasMany(() => SojalinkAttempt)
-  declare sojalink_attempts: HasMany<typeof SojalinkAttempt>
+  @hasMany(() => SojalinkAttempt, { foreignKey: 'eventId' })
+  declare attempts: HasMany<typeof SojalinkAttempt>
 
-  @hasMany(() => SojalinkEntityCorrelation)
-  declare sojalink_entity_correlations: HasMany<typeof SojalinkEntityCorrelation>
+  @hasMany(() => SojalinkEntityCorrelation, { foreignKey: 'createdByEventId' })
+  declare entityCorrelations: HasMany<typeof SojalinkEntityCorrelation>
 
-  @belongsTo(() => SojalinkRuleVersion)
-  declare sojalink_rule_versions: BelongsTo<typeof SojalinkRuleVersion>
+  @belongsTo(() => SojalinkRuleVersion, { foreignKey: 'appliedRuleVersionId' })
+  declare appliedRuleVersion: BelongsTo<typeof SojalinkRuleVersion>
 
-  @belongsTo(() => SojalinkEventType)
-  declare sojalink_event_types: BelongsTo<typeof SojalinkEventType>
+  @belongsTo(() => SojalinkEventType, { foreignKey: 'eventTypeId' })
+  declare eventType: BelongsTo<typeof SojalinkEventType>
 }

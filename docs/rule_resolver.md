@@ -14,7 +14,7 @@ Un **event** est un événement reçu par SojaLink. Il contient notamment un typ
 
 Une **rule** est une règle métier rattachée à un type d’événement. Elle possède une priorité. Plus la priorité est basse, plus la règle est prioritaire.
 
-Une **rule version** est une version active d’une règle. C’est elle qui contient les conditions à évaluer et la définition du pipeline à exécuter ensuite.
+Une **rule version** est une version active d’une règle. C’est elle qui contient les conditions à évaluer et la définition du pipeline à exécuter ensuite. Si une règle possède plusieurs versions actives, seule la plus récente (`version_number` le plus élevé) est considérée par le resolver.
 
 Les **conditions** sont des critères JSON qui permettent de savoir si une règle correspond à un événement.
 
@@ -198,9 +198,9 @@ Le resolver ne sélectionne pas la règle concernée.
 
 ## Données persistées sur l’événement
 
-Quand une règle est trouvée, le resolver enregistre l’identifiant de la version sélectionnée dans `applied_rule_version_id`.
+Quand une règle est trouvée, le resolver enregistre l’identifiant de la version sélectionnée dans `applied_rule_version_id`, la date de résolution dans `resolved_at`, et un snapshot de résolution dans `resolution_snapshot_json`.
 
-Il enregistre également un snapshot de résolution dans `resolution_snapshot_json`.
+En cas d’échec de résolution (aucune règle, ou plusieurs règles à la même priorité), le resolver enregistre le code et le message d’erreur dans `resolution_error_code` et `resolution_error_message` avant de lever une erreur typée (`NoMatchingRuleError`, `MultipleMatchingRulesError`).
 
 Exemple de snapshot :
 
@@ -248,9 +248,10 @@ Le resolver ne doit pas :
 | ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `app/application/events/rule_resolver.ts`            | Contient la logique principale de résolution                                            |
 | `app/application/events/evaluate_rule_conditions.ts` | Évalue les conditions d’une règle                                                       |
-| `app/application/events/event_workflow.ts`           | Appelle le resolver pendant le workflow de traitement                                   |
+| `app/application/events/event_workflow.ts`           | Appelle le resolver puis l’executor pendant le workflow de traitement                   |
 | `app/application/events/event_processor.ts`          | Réserve un événement, lance le workflow et marque l’événement comme traité ou en erreur |
-| `app/persistence/events/rule_repository.ts`          | Charge les événements, règles, versions actives et persiste la résolution               |
+| `app/persistence/events/rule_repository.ts`          | Charge les règles actives avec leur dernière version active                             |
+| `app/persistence/events/event_repository.ts`         | Charge l’événement en cours et persiste le résultat (ou l’échec) de résolution          |
 
 ## Exemple de cycle complet
 

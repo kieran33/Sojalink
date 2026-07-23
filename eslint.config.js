@@ -2,10 +2,12 @@ import { configApp } from '@adonisjs/eslint-config'
 
 const lucidModelImports = [
   '#models/sojalink_event',
-  '#models/event_type',
-  '#models/rule',
-  '#models/rule_version',
-  '#models/entity_correlation',
+  '#models/sojalink_event_type',
+  '#models/sojalink_rule',
+  '#models/sojalink_rule_version',
+  '#models/sojalink_attempt',
+  '#models/sojalink_step_log',
+  '#models/sojalink_entity_correlation',
 ].map((name) => ({
   name,
   message:
@@ -14,6 +16,11 @@ const lucidModelImports = [
 
 export default [
   ...configApp(),
+
+  {
+    // Generated file (node ace migration:run), not formatted by hand.
+    ignores: ['database/schema.ts'],
+  },
 
   {
     files: ['app/**/*.ts'],

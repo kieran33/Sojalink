@@ -1,10 +1,16 @@
 import type { DateTime } from 'luxon'
 
-export type AttemptEvent = {
+/**
+ * Lifecycle statuses of a pipeline execution attempt.
+ * Exactly one attempt may be active per event at any time.
+ */
+export type AttemptStatus = 'active' | 'success' | 'failed'
+
+export type Attempt = {
   id: number
   eventId: number
   attemptNumber: number
-  status: string
+  status: AttemptStatus
   errorCode: string | null
   errorMessage: string | null
   startedAt: DateTime

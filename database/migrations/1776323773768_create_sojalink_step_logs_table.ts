@@ -17,7 +17,7 @@ export default class extends BaseSchema {
 
       table.integer('step_index').notNullable()
       table.string('step_code').notNullable().index()
-      table.string('handler_key').notNullable()
+      table.string('handler_name').notNullable()
       table.string('status').notNullable().index()
       table.json('input_json').notNullable()
       table.json('output_json').nullable()

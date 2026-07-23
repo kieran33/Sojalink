@@ -4,9 +4,9 @@ import SojalinkEventType from '#models/sojalink_event_type'
 
 export default class SojalinkRuleSeeder extends BaseSeeder {
   async run() {
-    const eventType = await SojalinkEventType.query().orderBy('id', 'desc').firstOrFail()
+    const eventType = await SojalinkEventType.findByOrFail('code', 'sojadispro.order.created')
 
-    await SojalinkRule.updateOrCreateMany('eventTypeId', [
+    await SojalinkRule.updateOrCreateMany('code', [
       {
         eventTypeId: eventType.id,
         code: 'sojadispro-order-to-toki-task',

@@ -4,6 +4,6 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import SojalinkAttempt from '#models/sojalink_attempt'
 
 export default class SojalinkStepLog extends SojalinkStepLogSchema {
-  @belongsTo(() => SojalinkAttempt)
-  declare sojalink_attempts: BelongsTo<typeof SojalinkAttempt>
+  @belongsTo(() => SojalinkAttempt, { foreignKey: 'attemptId' })
+  declare attempt: BelongsTo<typeof SojalinkAttempt>
 }

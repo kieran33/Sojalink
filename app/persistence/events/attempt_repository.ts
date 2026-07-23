@@ -1,9 +1,13 @@
-import SojalinkAttempt from '#models/sojalink_attempt'
 import { DateTime } from 'luxon'
-import type { AttemptEvent } from '#domain/events/attempt'
+import SojalinkAttempt from '#models/sojalink_attempt'
+import type { Attempt, AttemptStatus } from '#domain/events/attempt'
 
 export class AttemptRepository {
-  async createAttempt(eventId: number): Promise<AttemptEvent> {
+  /**
+   * Creates the next attempt for an event. Refuses to create one while
+   * another attempt is still active (single active attempt per event).
+   */
+  async createAttempt(eventId: number): Promise<Attempt> {
     const existingAttempts = await SojalinkAttempt.query()
       .where('eventId', eventId)
       .count('* as total')
@@ -29,34 +33,36 @@ export class AttemptRepository {
     return this.toAttempt(attempt)
   }
 
-  async registerAttemptFinishedAt(attemptId: number): Promise<void> {
-    await SojalinkAttempt.query()
-      .where('id', attemptId)
-      .update({
-        finished_at: DateTime.utc().toFormat('yyyy-MM-dd HH:mm:ss'),
-      })
-  }
-
   async markAttemptAsSuccess(attemptId: number): Promise<void> {
-    await SojalinkAttempt.query().where('id', attemptId).update({
+    const attempt = await SojalinkAttempt.findOrFail(attemptId)
+
+    attempt.merge({
       status: 'success',
+      finishedAt: DateTime.utc(),
     })
+
+    await attempt.save()
   }
 
-  async markAttemptAsFailed(attemptId: number, error?: Error): Promise<void> {
-    await SojalinkAttempt.query().where('id', attemptId).update({
+  async markAttemptAsFailed(attemptId: number, error: Error): Promise<void> {
+    const attempt = await SojalinkAttempt.findOrFail(attemptId)
+
+    attempt.merge({
       status: 'failed',
-      errorMessage: error?.message,
-      errorCode: error?.name,
+      errorCode: error.name,
+      errorMessage: error.message,
+      finishedAt: DateTime.utc(),
     })
+
+    await attempt.save()
   }
 
-  private toAttempt(attempt: SojalinkAttempt): AttemptEvent {
+  private toAttempt(attempt: SojalinkAttempt): Attempt {
     return {
       id: attempt.id,
       eventId: attempt.eventId,
       attemptNumber: attempt.attemptNumber,
-      status: attempt.status,
+      status: attempt.status as AttemptStatus,
       errorCode: attempt.errorCode,
       errorMessage: attempt.errorMessage,
       startedAt: attempt.startedAt,

@@ -1,70 +1,46 @@
-// app/persistence/events/rule_repository.ts
-import SojalinkEvent from '#models/sojalink_event'
 import SojalinkRule from '#models/sojalink_rule'
-import SojalinkRuleVersion from '#models/sojalink_rule_version'
-import type { ProcessingEvent } from '#domain/events/event'
+import type { ResolvableRule } from '#domain/events/rule'
+import { InvalidJsonError } from '#domain/events/errors'
 
 export class RuleRepository {
-  async findProcessingEvent(eventId: number): Promise<ProcessingEvent | null> {
-    const event = await SojalinkEvent.query()
-      .where('id', eventId)
-      .where('status', 'processing')
-      .first()
-
-    if (!event) return null
-
-    return this.toProcessingEvent(event)
-  }
-
-  private toProcessingEvent(event: SojalinkEvent): ProcessingEvent {
-    if (!event.processingStartedAt) {
-      throw new Error('Expected processingStartedAt to be defined')
-    }
-
-    return {
-      id: event.id,
-      status: 'processing',
-      eventTypeId: event.eventTypeId,
-      sourceApp: event.sourceApp,
-      sourceEntityType: event.sourceEntityType,
-      sourceEntityId: event.sourceEntityId,
-      payloadJson: event.payloadJson,
-      createdAt: event.createdAt,
-      processingStartedAt: event.processingStartedAt,
-      appliedRuleVersionId: event.appliedRuleVersionId,
-    }
-  }
-
-  async findActiveRulesWithActiveVersions(eventTypeId: number) {
+  /**
+   * Loads the active rules of an event type, each with its latest active
+   * version (highest version_number). Rules without an active version are
+   * excluded. Ordered by priority (lowest number first).
+   */
+  async findActiveRulesWithLatestActiveVersion(eventTypeId: number): Promise<ResolvableRule[]> {
     const rules = await SojalinkRule.query()
       .where('eventTypeId', eventTypeId)
       .where('isActive', true)
+      .preload('versions', (query) => {
+        query.where('isActive', true).orderBy('versionNumber', 'desc')
+      })
       .orderBy('priority', 'asc')
 
-    return Promise.all(
-      rules.map(async (rule) => {
-        const versions = await SojalinkRuleVersion.query()
-          .where('ruleId', rule.id)
-          .where('isActive', true)
-          .orderBy('versionNumber', 'desc')
+    return rules
+      .filter((rule) => rule.versions.length > 0)
+      .map((rule) => {
+        const latestVersion = rule.versions[0]
 
         return {
           id: rule.id,
           code: rule.code,
           label: rule.label,
           priority: rule.priority,
-          versions,
+          version: {
+            id: latestVersion.id,
+            versionNumber: latestVersion.versionNumber,
+            conditions: this.parseConditions(rule.code, latestVersion.conditionsJson),
+          },
         }
       })
-    )
   }
 
-  async saveResolution(eventId: number, ruleVersionId: number, snapshot: unknown) {
-    await SojalinkEvent.query()
-      .where('id', eventId)
-      .update({
-        appliedRuleVersionId: ruleVersionId,
-        resolutionSnapshotJson: JSON.stringify(snapshot),
-      })
+  private parseConditions(ruleCode: string, conditionsJson: string): unknown {
+    try {
+      return JSON.parse(conditionsJson)
+    } catch {
+      throw new InvalidJsonError(`Rule "${ruleCode}" has an invalid conditions_json`)
+    }
   }
 }
