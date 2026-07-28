@@ -11,7 +11,7 @@ const lucidModelImports = [
 ].map((name) => ({
   name,
   message:
-    'Les modèles Lucid sont réservés à app/persistence. Utilise un objet métier exposé par app/domain.',
+    'Les modèles Lucid sont réservés à app/persistence et app/http. Utilise un objet métier exposé par app/domain.',
 }))
 
 export default [
@@ -24,7 +24,7 @@ export default [
 
   {
     files: ['app/**/*.ts'],
-    ignores: ['app/models/**/*.ts', 'app/persistence/**/*.ts'],
+    ignores: ['app/models/**/*.ts', 'app/persistence/**/*.ts', 'app/http/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',

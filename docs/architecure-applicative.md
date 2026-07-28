@@ -338,34 +338,34 @@ Dans cet exemple, `EventProcessor.process()` ne peut pas recevoir n’importe qu
 
 ### `app/http`
 
-Contient les adaptateurs HTTP.
+Contient les adaptateurs HTTP : controllers, validators, transformers.
 
-Cette couche est responsable :
+Seule exception à la règle « pas de Lucid hors persistance » : `app/http` peut recevoir et utiliser des modèles Lucid, à la seule condition qu'ils ne sortent jamais tels quels vers Inertia (toujours via un transformer).
 
-- des controllers ;
-- des validators ;
-- des transformers ;
-- de l’adaptation entre HTTP et l’application.
+Pourquoi cette exception : les controllers HTTP servent des pages d'affichage (lister, consulter), sans état à protéger le temps d'une requête. Le risque qui justifie les objets métier ailleurs (un event traité deux fois, une étape exécutée dans le désordre) est un risque d'exécution asynchrone et concurrente, propre au moteur (`app/domain`, `app/application`). Il n'existe pas sur une requête HTTP synchrone de lecture. Imposer un mapping vers un objet métier intermédiaire, alors que le transformer va de toute façon reformer les données pour la page, ajoute une étape sans bénéfice de sécurité de typage supplémentaire.
 
-Les controllers ne doivent pas importer directement les modèles Lucid. Ils appellent des cas d’usage applicatifs.
+Un controller appelle un cas d'usage applicatif (`app/application`), qui charge les données via un repository (`app/persistence`) avec les relations nécessaires préchargées. Le repository peut renvoyer le modèle Lucid préchargé directement, ou un objet métier si le cas d'usage en a besoin (le moteur, lui, ne reçoit jamais de Lucid).
 
-Les transformers transforment des objets métier en réponses HTTP.
+Le transformer prend ce que renvoie le cas d'usage et produit les données envoyées au frontend. Utiliser `@adonisjs/core/transformers` (`BaseTransformer`, `.pick()` pour lister explicitement les champs exposés, `.whenLoaded()` pour les relations préchargées) : `.pick()` garantit qu'aucune colonne interne ne fuite par oubli, qu'on parte d'un Lucid ou d'un objet métier.
 
 Exemple :
 
 ```ts
+// app/http/controllers/rules_controller.ts
 import { inject } from '@adonisjs/core'
-import { ListEvents } from '#application/events/list_events'
-import { EventTransformer } from '#http/transformers/event_transformer'
+import { GetRuleDetail } from '#application/rules/get_rule_detail'
+import RuleDetailTransformer from '#http/transformers/rule_detail_transformer'
 
 @inject()
-export default class EventsController {
-  constructor(private listEvents: ListEvents) {}
+export default class RulesController {
+  constructor(private getRuleDetail: GetRuleDetail) {}
 
-  async index() {
-    const events = await this.listEvents.handle()
+  async show({ params, inertia }: HttpContext) {
+    const rule = await this.getRuleDetail.handle(params.id)
 
-    return events.map((event) => EventTransformer.toJson(event))
+    return inertia.render('rules/show', {
+      rule: RuleDetailTransformer.transform(rule).useVariant('forShowPage'),
+    })
   }
 }
 ```
@@ -373,15 +373,18 @@ export default class EventsController {
 Exemple de transformer :
 
 ```ts
-import type { DomainEvent } from '#domain/events/event'
+import { BaseTransformer } from '@adonisjs/core/transformers'
+import type SojalinkRule from '#models/sojalink_rule'
 
-export class EventTransformer {
-  static toJson(event: DomainEvent) {
+export default class RuleDetailTransformer extends BaseTransformer<SojalinkRule> {
+  forShowPage() {
     return {
-      id: event.id,
-      status: event.status,
-      type: event.type,
-      occurredAt: event.occurredAt.toISO(),
+      ...this.pick(this.resource, ['id', 'code', 'label', 'priority', 'isActive']),
+      versions: this.whenLoaded(this.resource.versions)?.map((version) => ({
+        id: version.id,
+        versionNumber: version.versionNumber,
+        isActive: version.isActive,
+      })),
     }
   }
 }
@@ -426,16 +429,18 @@ Règles principales :
 
 ```txt
 app/models      = modèles Lucid uniquement
-app/persistence = seule couche applicative autorisée à importer app/models
+app/persistence = seule couche autorisée à construire des objets métier depuis Lucid
 app/domain      = métier pur, pas de Lucid, pas de HTTP
 app/application = orchestration, pas de modèles Lucid
-app/http        = adaptation HTTP, pas de modèles Lucid
+app/http        = adaptation HTTP, peut utiliser les modèles Lucid (via les transformers, jamais exposés tels quels)
 app/workers     = adaptation worker, pas de modèles Lucid
 ```
 
+Seul `app/http` déroge à la règle « pas de Lucid hors persistance », pour les raisons expliquées plus haut. `app/domain`, `app/application` et `app/workers` restent bloqués : c'est là que vivent les invariants d'état du moteur (resolver/executor), qui ont besoin d'objets métier typés pour rester sûrs (voir `docs/rule_resolver.md`, `docs/runtime_executor.md`).
+
 ## Règle ESLint
 
-Les modèles Lucid ne doivent être importés que par `app/persistence` ou `app/models`.
+Les modèles Lucid ne doivent être importés que par `app/models`, `app/persistence`, et `app/http`.
 
 Exemple avec `no-restricted-imports` et `paths` :
 
@@ -444,14 +449,16 @@ import { configApp } from '@adonisjs/eslint-config'
 
 const lucidModelImports = [
   '#models/sojalink_event',
-  '#models/event_type',
-  '#models/rule',
-  '#models/rule_version',
-  '#models/entity_correlation',
+  '#models/sojalink_event_type',
+  '#models/sojalink_rule',
+  '#models/sojalink_rule_version',
+  '#models/sojalink_attempt',
+  '#models/sojalink_step_log',
+  '#models/sojalink_entity_correlation',
 ].map((name) => ({
   name,
   message:
-    'Les modèles Lucid sont réservés à app/persistence. Utilise un objet métier exposé par app/domain.',
+    'Les modèles Lucid sont réservés à app/persistence et app/http. Utilise un objet métier exposé par app/domain.',
 }))
 
 export default [
@@ -459,7 +466,7 @@ export default [
 
   {
     files: ['app/**/*.ts'],
-    ignores: ['app/models/**/*.ts', 'app/persistence/**/*.ts'],
+    ignores: ['app/models/**/*.ts', 'app/persistence/**/*.ts', 'app/http/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
