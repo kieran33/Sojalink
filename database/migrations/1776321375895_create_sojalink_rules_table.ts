@@ -15,8 +15,8 @@ export default class extends BaseSchema {
         .notNullable()
         .index()
 
-      table.string('code').notNullable().unique()
-      table.string('label').notNullable().index()
+      table.string('code', 100).notNullable().unique()
+      table.string('label', 100).notNullable().index()
       table.integer('priority').notNullable().index()
       table.boolean('is_active').notNullable().defaultTo(true).index()
 

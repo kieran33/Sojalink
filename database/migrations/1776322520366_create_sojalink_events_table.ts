@@ -15,15 +15,15 @@ export default class extends BaseSchema {
         .notNullable()
         .index()
 
-      table.string('source_app').notNullable().index()
-      table.string('source_entity_type').notNullable()
+      table.string('source_app', 100).notNullable().index()
+      table.string('source_entity_type', 100).notNullable()
       table.integer('source_entity_id').notNullable()
 
       table.unique(['source_app', 'source_entity_type', 'source_entity_id', 'event_type_id'], {
         indexName: 'sojalink_events_unique_source_event',
       })
 
-      table.string('status').notNullable().index()
+      table.string('status', 100).notNullable().index()
       table.json('payload_json').notNullable()
 
       table
@@ -35,7 +35,7 @@ export default class extends BaseSchema {
         .index()
 
       table.json('resolution_snapshot_json').nullable()
-      table.string('resolution_error_code').nullable().index()
+      table.string('resolution_error_code', 100).nullable().index()
       table.text('resolution_error_message').nullable()
 
       table.datetime('created_at').notNullable().defaultTo(this.now()).index()

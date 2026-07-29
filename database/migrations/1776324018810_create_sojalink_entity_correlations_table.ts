@@ -6,13 +6,13 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
-      table.string('source_app').notNullable()
-      table.string('source_entity_type').notNullable()
+      table.string('source_app', 100).notNullable()
+      table.string('source_entity_type', 100).notNullable()
       table.integer('source_entity_id').notNullable()
-      table.string('target_app').notNullable()
-      table.string('target_entity_type').notNullable()
+      table.string('target_app', 100).notNullable()
+      table.string('target_entity_type', 100).notNullable()
       table.integer('target_entity_id').notNullable()
-      table.string('correlation_key').notNullable().unique()
+      table.string('correlation_key', 100).notNullable().unique()
       table
         .integer('created_by_event_id')
         .unsigned()
