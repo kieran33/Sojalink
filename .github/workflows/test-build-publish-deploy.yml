@@ -92,6 +92,6 @@ jobs:
       - name: Deploy to Railway
         run: |
           npm i -g @railway/cli
-          railway redeploy --service sojalink --yes
+          railway redeploy --service sojalink-deployment --yes
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
