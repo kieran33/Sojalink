@@ -1,49 +1,12 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import SojalinkEventTypeSeeder from '#database/seeders/sojalink_event_type_seeder'
-import SojalinkRuleSeeder from '#database/seeders/sojalink_rule_seeder'
-import SojalinkRuleVersionSeeder from '#database/seeders/sojalink_rule_version_seeder'
+import testUtils from '@adonisjs/core/services/test_utils'
+import { seedEventGraph, type EventGraph } from '#tests/helpers/event_graph_factory'
 
 const FK_ERROR = /foreign key/i
 const UNIQUE_ERROR = /duplicate|unique/i
 
-type RuleContext = {
-  eventTypeId: number
-  ruleVersionId: number
-}
-
-async function seedRuleContext(): Promise<RuleContext> {
-  const client = db.connection()
-
-  await new SojalinkEventTypeSeeder(client).run()
-  await new SojalinkRuleSeeder(client).run()
-  await new SojalinkRuleVersionSeeder(client).run()
-
-  const eventType = await db
-    .from('sojalink_event_types')
-    .where('code', 'sojadispro.order.created')
-    .first()
-
-  const rule = await db
-    .from('sojalink_rules')
-    .where('code', 'sojadispro-order-to-toki-task')
-    .first()
-
-  const ruleVersion = rule
-    ? await db.from('sojalink_rule_versions').where('rule_id', rule.id).first()
-    : null
-
-  if (!eventType || !rule || !ruleVersion) {
-    throw new Error('Expected event type, rule and rule version to exist')
-  }
-
-  return {
-    eventTypeId: eventType.id,
-    ruleVersionId: ruleVersion.id,
-  }
-}
-
-async function insertEvent(context: RuleContext, sourceEntityId?: number) {
+async function insertEvent(context: EventGraph, sourceEntityId?: number) {
   const entityId = sourceEntityId ?? Math.floor(Math.random() * 1000)
 
   const [eventId] = await db.table('sojalink_events').insert({
@@ -92,18 +55,10 @@ async function insertAttempt(eventId: number) {
 }
 
 test.group('Sojalink database constraints', (group) => {
-  group.each.setup(async () => {
-    await db.from('sojalink_step_logs').delete()
-    await db.from('sojalink_attempts').delete()
-    await db.from('sojalink_entity_correlations').delete()
-    await db.from('sojalink_events').delete()
-    await db.from('sojalink_rule_versions').delete()
-    await db.from('sojalink_rules').delete()
-    await db.from('sojalink_event_types').delete()
-  })
+  group.each.setup(() => testUtils.db().wrapInGlobalTransaction())
 
   test('events must reference an existing event type', async ({ assert }) => {
-    const context = await seedRuleContext()
+    const context = await seedEventGraph()
 
     await assert.rejects(
       () =>
@@ -122,7 +77,7 @@ test.group('Sojalink database constraints', (group) => {
   })
 
   test('events must reference an existing applied rule version', async ({ assert }) => {
-    const context = await seedRuleContext()
+    const context = await seedEventGraph()
 
     const [eventId] = await db.table('sojalink_events').insert({
       event_type_id: context.eventTypeId,
@@ -177,7 +132,7 @@ test.group('Sojalink database constraints', (group) => {
   })
 
   test('events must be unique per source entity and event type', async ({ assert }) => {
-    const context = await seedRuleContext()
+    const context = await seedEventGraph()
     const sourceEntityId = Math.floor(Math.random() * 1000)
 
     await insertEvent(context, sourceEntityId)
@@ -199,7 +154,7 @@ test.group('Sojalink database constraints', (group) => {
   })
 
   test('events can reuse source entities across event types', async ({ assert }) => {
-    const context = await seedRuleContext()
+    const context = await seedEventGraph()
     const sourceEntityId = Math.floor(Math.random() * 1000)
 
     await insertEvent(context, sourceEntityId)
@@ -224,7 +179,7 @@ test.group('Sojalink database constraints', (group) => {
   })
 
   test('entity correlation keys must be unique', async ({ assert }) => {
-    const context = await seedRuleContext()
+    const context = await seedEventGraph()
     const eventId = await insertEvent(context)
 
     await insertCorrelation(eventId, 'unique-entity-key')
@@ -246,7 +201,7 @@ test.group('Sojalink database constraints', (group) => {
   })
 
   test('source and target entity pairs must be unique', async ({ assert }) => {
-    const context = await seedRuleContext()
+    const context = await seedEventGraph()
     const eventId = await insertEvent(context)
     const sourceEntityId = Math.floor(Math.random() * 1000)
     const targetEntityId = Math.floor(Math.random() * 1000)
@@ -272,7 +227,7 @@ test.group('Sojalink database constraints', (group) => {
   test('valid event, correlation, attempt and step log rows can be inserted', async ({
     assert,
   }) => {
-    const context = await seedRuleContext()
+    const context = await seedEventGraph()
     const eventId = await insertEvent(context)
 
     await insertCorrelation(eventId, 'valid-graph')
