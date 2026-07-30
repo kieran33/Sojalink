@@ -60,30 +60,29 @@ SojalinkRule --< SojalinkRuleVersion --< SojalinkEvent --< SojalinkAttempt --< S
 ```
 GET /dashboard
   → app/http/controllers/dashboard_controller.ts        (index)
-    → app/application/rules/list_rules_with_stats.ts
-      → app/persistence/events/rule_repository.ts
-      → app/persistence/events/event_repository.ts
+    → app/http/actions/dashboard/list_rules_with_stats.ts   (requête Lucid directe)
     ← modèle(s) Lucid préchargé(s)
-  → app/http/transformers/rule_list_transformer.ts
+  → app/http/transformers/rule_transformer.ts (toObject())
   → ctx.inertia.render('dashboard/index', props)
   → inertia/pages/dashboard/index.tsx
 
 GET /rules/:id
   → app/http/controllers/rules_controller.ts             (show)
-    → app/application/rules/get_rule_detail.ts
-      → app/persistence/events/rule_repository.ts
-      → app/persistence/events/event_repository.ts
+    → app/http/actions/rules/get_rule_details.ts             (requête Lucid directe)
     ← modèle(s) Lucid préchargé(s)
-  → app/http/transformers/rule_detail_transformer.ts
+  → app/http/transformers/rule_transformer.ts (forShowPage())
   → ctx.inertia.render('rules/show', props)
   → inertia/pages/rules/show.tsx
 ```
+
+Pas de passage par `app/application`/`app/persistence` : contrairement au moteur (resolver/executor), une lecture HTTP synchrone n'a pas de risque de concurrence à protéger, donc pas besoin de l'indirection use case + repository + objet métier. La requête Lucid (préchargements compris) vit directement dans une "action" (classe à méthode statique `handle()`) co-localisée dans `app/http/actions/`. Voir `docs/architecure-applicative.md` (section `app/http`) pour la règle générale.
 
 Règles à respecter (cohérent avec `docs/architecure-applicative.md` et le commentaire déjà présent dans `inertia_middleware.ts` : *"Make sure you are using transformers for rich data-types like Models"*) :
 
 - le controller ne reçoit/renvoie jamais un modèle Lucid directement à Inertia ; toujours via un transformer ;
 - le transformer résout côté serveur ce qui est aujourd'hui codé en dur côté client dans le mockup (libellés, formats de date, styles de badge) ; le composant React ne fait aucun calcul métier ;
 - les routes sont nommées (`.as('dashboard')`, `.as('rules.show')`) pour rester exploitables via le client Tuyau typé. Pas d'URL en dur dans les composants.
+- chaque relation imbriquée composée via un transformer dédié (`RuleVersionTransformer`, `EventTransformer`, `AttemptTransformer`, `StepLogTransformer`...) plutôt que mappée à la main ; penser à `.depth(n)` quand la chaîne de composition dépasse 1 niveau (résolution des relations imbriquées limitée à 1 niveau par défaut).
 
 Correction par rapport au mockup : le prototype Claude Design est une single-page avec un state machine client (`view: 'list' | 'detail'`) sans vraie navigation. Dans l'implémentation réelle, `/dashboard` et `/rules/:id` sont deux vraies routes Inertia : la navigation liste → détail doit passer par `<Link>`/`router.visit`, pas par un `useState` local. Ça donne des URLs partageables, le back/forward navigateur, et des payloads séparés (pas besoin de charger le détail de toutes les règles pour afficher la liste).
 
@@ -108,7 +107,7 @@ shadcn/ui :
 
 ## 8. Tests attendus
 
-- un test par use case (`ListRulesWithStats`, `GetRuleDetail`), suivant le pattern déjà en place dans `tests/unit/*.spec.ts` (Japa + `dbAssertions`) : règle multi-versions, règle sans événement, event non résolu, tentative en échec.
+- un test par action (`ListRulesWithStats`, `GetRuleDetails`, dans `app/http/actions/`), suivant le pattern déjà en place dans `tests/unit/*.spec.ts` (Japa + `dbAssertions`) : règle multi-versions, règle sans événement, event non résolu, tentative en échec.
 
 ---
 

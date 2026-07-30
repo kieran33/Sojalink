@@ -23,7 +23,7 @@ export default function Layout({ children }: { children: ReactElement<Data.Share
       <header>
         <div>
           <div>
-            <Link route="home">
+            <Link route="dashboard">
               <svg
                 width="120"
                 height="24"

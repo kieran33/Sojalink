@@ -60,6 +60,16 @@ test.group('EventRepository.reserveNextPendingEvent', (group) => {
     await db.from('sojalink_event_types').delete()
   })
 
+  group.teardown(async () => {
+    await db.from('sojalink_step_logs').delete()
+    await db.from('sojalink_attempts').delete()
+    await db.from('sojalink_entity_correlations').delete()
+    await db.from('sojalink_events').delete()
+    await db.from('sojalink_rule_versions').delete()
+    await db.from('sojalink_rules').delete()
+    await db.from('sojalink_event_types').delete()
+  })
+
   test('returns null when there is no pending event', async ({ assert }) => {
     const reservedEvent = await new EventRepository().reserveNextPendingEvent()
 

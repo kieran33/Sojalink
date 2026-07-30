@@ -344,27 +344,38 @@ Seule exception à la règle « pas de Lucid hors persistance » : `app/http` pe
 
 Pourquoi cette exception : les controllers HTTP servent des pages d'affichage (lister, consulter), sans état à protéger le temps d'une requête. Le risque qui justifie les objets métier ailleurs (un event traité deux fois, une étape exécutée dans le désordre) est un risque d'exécution asynchrone et concurrente, propre au moteur (`app/domain`, `app/application`). Il n'existe pas sur une requête HTTP synchrone de lecture. Imposer un mapping vers un objet métier intermédiaire, alors que le transformer va de toute façon reformer les données pour la page, ajoute une étape sans bénéfice de sécurité de typage supplémentaire.
 
-Un controller appelle un cas d'usage applicatif (`app/application`), qui charge les données via un repository (`app/persistence`) avec les relations nécessaires préchargées. Le repository peut renvoyer le modèle Lucid préchargé directement, ou un objet métier si le cas d'usage en a besoin (le moteur, lui, ne reçoit jamais de Lucid).
+Pour une simple lecture HTTP (lister, consulter le détail), pas besoin de passer par `app/application`/`app/persistence` : le controller appelle directement une **action**, une classe à méthode statique `handle()` co-localisée dans `app/http/actions/`, qui fait la requête Lucid (avec les préchargements nécessaires) et la renvoie telle quelle. C'est le même principe qu'un cas d'usage (une classe, un point d'entrée, une responsabilité), mais sans repository ni objet métier intermédiaire — puisque `app/http` est déjà la zone autorisée à manipuler du Lucid, et qu'une lecture HTTP synchrone n'a pas le risque de concurrence que ces couches protègent (voir ci-dessus). Réservez `app/application`/`app/persistence` à ce qui est aussi appelé par `app/workers`, ou qui a un vrai besoin de réutilisation en dehors de `app/http`.
 
-Le transformer prend ce que renvoie le cas d'usage et produit les données envoyées au frontend. Utiliser `@adonisjs/core/transformers` (`BaseTransformer`, `.pick()` pour lister explicitement les champs exposés, `.whenLoaded()` pour les relations préchargées) : `.pick()` garantit qu'aucune colonne interne ne fuite par oubli, qu'on parte d'un Lucid ou d'un objet métier.
+Le transformer prend ce que renvoie l'action et produit les données envoyées au frontend. Utiliser `@adonisjs/core/transformers` (`BaseTransformer`, `.pick()` pour lister explicitement les champs exposés, `.whenLoaded()` pour composer une relation avec un autre transformer) : `.pick()` garantit qu'aucune colonne interne ne fuite par oubli. Chaque relation imbriquée se compose avec le transformer de l'entité correspondante plutôt que d'être mappée à la main ; la résolution des relations imbriquées est limitée à 1 niveau par défaut, penser à `.depth(n)` au-delà.
 
 Exemple :
 
 ```ts
+// app/http/actions/rules/get_rule_details.ts
+import SojalinkRule from '#models/sojalink_rule'
+
+export default class GetRuleDetails {
+  static async handle(ruleId: number) {
+    return SojalinkRule.query()
+      .where('id', ruleId)
+      .preload('versions')
+      .firstOrFail()
+  }
+}
+```
+
+```ts
 // app/http/controllers/rules_controller.ts
-import { inject } from '@adonisjs/core'
-import { GetRuleDetail } from '#application/rules/get_rule_detail'
-import RuleDetailTransformer from '#http/transformers/rule_detail_transformer'
+import type { HttpContext } from '@adonisjs/core/http'
+import GetRuleDetails from '#http/actions/rules/get_rule_details'
+import RuleTransformer from '#http/transformers/rule_transformer'
 
-@inject()
 export default class RulesController {
-  constructor(private getRuleDetail: GetRuleDetail) {}
-
   async show({ params, inertia }: HttpContext) {
-    const rule = await this.getRuleDetail.handle(params.id)
+    const rule = await GetRuleDetails.handle(Number(params.id))
 
     return inertia.render('rules/show', {
-      rule: RuleDetailTransformer.transform(rule).useVariant('forShowPage'),
+      rule: RuleTransformer.transform(rule).useVariant('forShowPage'),
     })
   }
 }
@@ -376,11 +387,15 @@ Exemple de transformer :
 import { BaseTransformer } from '@adonisjs/core/transformers'
 import type SojalinkRule from '#models/sojalink_rule'
 
-export default class RuleDetailTransformer extends BaseTransformer<SojalinkRule> {
+export default class RuleTransformer extends BaseTransformer<SojalinkRule> {
+  toObject() {
+    return this.pick(this.resource, ['id', 'code', 'label', 'priority', 'isActive'])
+  }
+
   forShowPage() {
     return {
-      ...this.pick(this.resource, ['id', 'code', 'label', 'priority', 'isActive']),
-      versions: this.whenLoaded(this.resource.versions)?.map((version) => ({
+      ...this.toObject(),
+      versions: this.resource.versions.map((version) => ({
         id: version.id,
         versionNumber: version.versionNumber,
         isActive: version.isActive,
@@ -526,6 +541,12 @@ Classe responsable de la lecture et écriture en base de données. Elle utilise 
 Classe applicative qui orchestre un scénario métier.
 
 Exemple : `ProcessNextPendingEvent`.
+
+### Action (`app/http`)
+
+Équivalent d'un use case, mais réservé aux lectures HTTP : classe à méthode statique `handle()`, co-localisée dans `app/http/actions`, qui requête Lucid directement sans passer par repository/objet métier.
+
+Exemple : `GetRuleDetails`.
 
 ### Transformer HTTP
 

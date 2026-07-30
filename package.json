@@ -19,7 +19,10 @@
     "typecheck": "tsc --noEmit && tsc --noEmit --project inertia/tsconfig.json"
   },
   "imports": {
-    "#controllers/*": "./app/controllers/*.js",
+    "#http/*": "./app/http/*.js",
+    "#controllers/*": "./app/http/controllers/*.js",
+    "#transformers/*": "./app/http/transformers/*.js",
+    "#actions/*": "./app/http/actions/*.js",
     "#application/*": "./app/application/*.js",
     "#domain/*": "./app/domain/*.js",
     "#persistence/*": "./app/persistence/*.js",
@@ -33,7 +36,6 @@
     "#repositories/*": "./app/repositories/*.js",
     "#generated/*": "./.adonisjs/server/*.js",
     "#middleware/*": "./app/middleware/*.js",
-    "#transformers/*": "./app/transformers/*.js",
     "#validators/*": "./app/validators/*.js",
     "#providers/*": "./providers/*.js",
     "#policies/*": "./app/policies/*.js",
@@ -67,7 +69,7 @@
     "youch": "^4.1.1"
   },
   "dependencies": {
-    "@adonisjs/core": "^7.3.1",
+    "@adonisjs/core": "^7.3.5",
     "@adonisjs/cors": "^3.0.0",
     "@adonisjs/inertia": "^4.2.0",
     "@adonisjs/lucid": "^22.4.2",
