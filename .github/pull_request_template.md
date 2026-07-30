@@ -14,11 +14,11 @@ Expliquer rapidement ce que fait la PR et pourquoi.
 
 ### Périmètre
 
-- DB :
-- Worker :
-- Resolver / Executor :
-- Handlers :
-- Tests : 
+Composants impactés (adapter selon la PR) :
+- Backend :
+- Frontend :
+- Base de données :
+- Tests :
 
 ---
 
@@ -43,6 +43,7 @@ Résultat attendu :
 - [ ] Des tests ont été ajoutés ou mis à jour si nécessaire
 - [ ] Les tests existants passent en local
 - [ ] La documentation a été mise à jour si nécessaire
+- [ ] La PR reste de taille raisonnable (sinon, la découper en plusieurs PR — voir `docs/WORKFLOW.md`)
 
 ---
 
@@ -61,4 +62,4 @@ Si applicable
 ### Notes
 
 - changements hors projet/code :
-- points d’attention :
+- points d'attention :
