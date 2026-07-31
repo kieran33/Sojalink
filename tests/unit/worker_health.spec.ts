@@ -1,7 +1,13 @@
 import { test } from '@japa/runner'
+import redis from '@adonisjs/redis/services/main'
 import { WorkerHealthRepository } from '#persistence/events/worker_health_repository'
 
-test.group('WorkerHealthRepository', () => {
+test.group('WorkerHealthRepository', (group) => {
+  group.each.setup(async () => {
+    await redis.del('worker_pending_event:last_heartbeat')
+    await redis.del('worker_pending_event:recent_durations')
+  })
+
   test('reports unhealthy when no run has ever been recorded', async ({ assert }) => {
     const repository = new WorkerHealthRepository()
 
