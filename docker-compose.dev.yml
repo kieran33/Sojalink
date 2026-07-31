@@ -15,3 +15,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  redis:
+    image: redis:latest
+    container_name: Redis_container
+    ports:
+      - "6379:6379"
