@@ -99,9 +99,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to Railway
+      - name: Deploy web service to Railway
         run: |
           npm i -g @railway/cli
           railway redeploy --service sojalink-deployment --yes
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy worker service to Railway
+        run: railway redeploy --service worker-pending-events --yes
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
