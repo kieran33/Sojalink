@@ -13,7 +13,7 @@ test.group('WorkerHealthRepository', (group) => {
 
     const stats = await repository.getStats()
 
-    assert.isFalse(stats.isHealthy)
+    assert.isFalse(stats.isRunning)
     assert.isNull(stats.lastRunAt)
   })
 
@@ -23,7 +23,8 @@ test.group('WorkerHealthRepository', (group) => {
     await repository.recordRun(42)
     const stats = await repository.getStats()
 
-    assert.isTrue(stats.isHealthy)
-    assert.equal(stats.recentRunsCount, 1)
+    assert.isTrue(stats.isRunning)
+    assert.equal(stats.totalRunsCount, 1)
+    assert.isNotNull(stats.lastRunAtFormatted)
   })
 })

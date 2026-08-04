@@ -1,10 +1,12 @@
 import redis from '@adonisjs/redis/services/main'
+import { DateTime } from 'luxon'
 
 type WorkerHealthStats = {
-  isHealthy: boolean
+  isRunning: boolean
   lastRunAt: string | null
-  averageDuration: number | null
-  recentRunsCount: number
+  lastRunAtFormatted: string | null
+  averageDurationInMs: number | null
+  totalRunsCount: number
 }
 
 export class WorkerHealthRepository {
@@ -25,20 +27,25 @@ export class WorkerHealthRepository {
     const lastRunAt = await redis.get(this.heartbeatKey)
     const durations = await redis.lrange(this.durationsKey, 0, -1)
 
-    const isHealthy = lastRunAt
+    const isRunning = lastRunAt
       ? (Date.now() - new Date(lastRunAt).getTime()) / 1000 < this.brokeAfterSeconds
       : false
 
-    const averageDuration =
+    const lastRunAtFormatted = lastRunAt
+      ? DateTime.fromISO(lastRunAt).setZone('Europe/Paris').toFormat('dd/MM/yyyy HH:mm:ss')
+      : null
+
+    const averageDurationInMs =
       durations.length > 0
         ? durations.reduce((sum, d) => sum + Number(d), 0) / durations.length
         : null
 
     return {
-      isHealthy,
+      isRunning,
       lastRunAt,
-      averageDuration,
-      recentRunsCount: durations.length,
+      lastRunAtFormatted,
+      averageDurationInMs,
+      totalRunsCount: durations.length,
     }
   }
 }
