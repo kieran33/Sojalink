@@ -34,7 +34,7 @@ export default class extends BaseSchema {
         .nullable()
         .index()
 
-      table.json('resolution_snapshot_json').nullable()
+      table.text('resolution_snapshot_json').nullable()
       table.string('resolution_error_code', 100).nullable().index()
       table.text('resolution_error_message').nullable()
 
