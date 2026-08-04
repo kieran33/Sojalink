@@ -1,11 +1,12 @@
 import { execSync } from 'node:child_process'
 
-console.log('Resetting database...')
+console.log('Running migrations...')
 try {
   execSync('node ace migration:run --force', { stdio: 'inherit' })
-  console.log('Migration done.')
+  console.log('Migrations done.')
 } catch (error) {
-  console.log('Migration failed, continuing...')
+  console.error('Migration failed:', error)
+  process.exit(1)
 }
 
 console.log('Starting server...')
