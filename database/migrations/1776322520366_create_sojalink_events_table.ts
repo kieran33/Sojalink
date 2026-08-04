@@ -24,7 +24,7 @@ export default class extends BaseSchema {
       })
 
       table.string('status', 100).notNullable().index()
-      table.json('payload_json').notNullable()
+      table.text('payload_json').notNullable()
 
       table
         .integer('applied_rule_version_id')
