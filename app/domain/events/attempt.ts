@@ -1,9 +1,5 @@
 import type { DateTime } from 'luxon'
 
-/**
- * Lifecycle statuses of a pipeline execution attempt.
- * Exactly one attempt may be active per event at any time.
- */
 export type AttemptStatus = 'active' | 'success' | 'failed'
 
 export type Attempt = {

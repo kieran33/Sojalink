@@ -4,15 +4,6 @@ import { PipelineValidationError } from '#domain/events/errors'
 import { collectInputReferences } from '#application/events/input_resolver'
 import { HandlerRegistry } from '#application/handlers/handler_registry'
 
-/**
- * Validates a raw `pipeline_json` before any step is executed:
- * - `steps` present and non-empty
- * - every step has a non-empty, unique `key`
- * - every step has a `handler` registered in the HandlerRegistry
- * - every `{{ steps.<key>.* }}` reference points to a previous step
- *
- * An invalid pipeline fails the attempt before the first step runs.
- */
 @inject()
 export class PipelineValidator {
   constructor(private handlerRegistry: HandlerRegistry) {}

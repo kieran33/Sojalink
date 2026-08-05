@@ -7,10 +7,6 @@ import SojalinkRuleVersionSeeder from '#database/seeders/sojalink_rule_version_s
 import SojalinkEventSeeder from '#database/seeders/sojalink_event_seeder'
 import { EventProcessor } from '#application/events/event_processor'
 
-/**
- * End-to-end coverage of one polling tick:
- * reservation -> rule resolution -> pipeline execution -> final status.
- */
 async function seedProcessableGraph() {
   const client = db.connection()
   await new SojalinkEventTypeSeeder(client).run()
@@ -68,7 +64,6 @@ test.group('EventProcessor', (group) => {
     assert.equal(stepLogs[0].step_code, 'notify_team')
     assert.equal(stepLogs[0].status, 'success')
 
-    // The seeded input template must reach the handler fully resolved.
     const input = JSON.parse(stepLogs[0].input_json)
     assert.equal(input.message, `New event ${eventId} received from SojadisPro`)
 
@@ -80,7 +75,6 @@ test.group('EventProcessor', (group) => {
   }) => {
     const { eventId } = await seedProcessableGraph()
 
-    // The seeded rule only matches sourceApp = SojadisPro.
     await db.from('sojalink_events').where('id', eventId).update({ source_app: 'UnknownApp' })
 
     await assert.doesNotReject(() => processNextEvent())

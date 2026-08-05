@@ -15,10 +15,6 @@ export type StepExecutionRequest = {
   previousOutputs: Record<string, HandlerOutput>
 }
 
-/**
- * Executes a single pipeline step: resolves the input, calls the handler
- * and writes a step log — for successes and failures alike.
- */
 @inject()
 export class StepExecutor {
   constructor(
@@ -32,7 +28,6 @@ export class StepExecutor {
     const startedAt = DateTime.utc()
     const handlerEvent = this.toHandlerEvent(event)
 
-    // On input resolution failure, the raw template is logged instead.
     let input: Record<string, unknown> = step.input ?? {}
 
     try {
