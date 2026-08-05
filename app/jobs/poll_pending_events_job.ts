@@ -15,11 +15,11 @@ export default class PollPendingEventsJob extends Job {
     super()
   }
 
-  async execute() {
+  async execute(): Promise<void> {
     await this.pendingEventsWorker.handle()
   }
 
-  async failed(error: Error) {
+  async failed(error: Error): Promise<void> {
     logger.error({ err: error }, 'Poll pending events job failed')
   }
 }
