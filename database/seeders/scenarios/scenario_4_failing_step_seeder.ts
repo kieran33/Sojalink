@@ -1,49 +1,58 @@
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
-import {
-  ensureScenarioGraph,
-  insertPendingEvent,
-  printExpectation,
-} from '#database/support/scenario_helpers'
+import SojalinkEventType from '#models/sojalink_event_type'
+import SojalinkRule from '#models/sojalink_rule'
+import SojalinkRuleVersion from '#models/sojalink_rule_version'
+import SojalinkEvent from '#models/sojalink_event'
 
-/**
- * Scenario 4 — failing step (unresolvable input).
- * The pipeline references {{ event.payload.name }} but the event payload
- * has no "name" field: the first step fails, the second never runs.
- *
- * Run while the worker is up:
- *   node ace db:seed --files "database/seeders/scenarios/scenario_4_failing_step_seeder.ts"
- */
 export default class Scenario4FailingStepSeeder extends BaseSeeder {
   static environment = ['development']
 
   async run() {
-    const { eventType } = await ensureScenarioGraph({
-      eventTypeCode: 'scenario.failing_step',
-      ruleCode: 'scenario-failing-step',
-      conditions: { op: 'eq', field: 'sourceApp', value: 'SojadisPro' },
-      pipeline: {
-        steps: [
-          {
-            key: 'notify_team',
-            handler: 'email_notification',
-            input: { message: 'Event {{ event.id }}: {{ event.payload.name }}' },
-          },
-          { key: 'notify_manager', handler: 'email_notification' },
-        ],
-      },
-    })
+    const eventType = await SojalinkEventType.updateOrCreate(
+      { code: 'scenario.failing_step' },
+      { code: 'scenario.failing_step', label: 'Scenario failing step', isActive: true }
+    )
 
-    const event = await insertPendingEvent({
+    const rule = await SojalinkRule.updateOrCreate(
+      { code: 'scenario-failing-step' },
+      {
+        code: 'scenario-failing-step',
+        label: 'Scenario failing step',
+        eventTypeId: eventType.id,
+        priority: 5,
+        isActive: true,
+      }
+    )
+
+    await SojalinkRuleVersion.updateOrCreate(
+      { ruleId: rule.id, versionNumber: 1 },
+      {
+        ruleId: rule.id,
+        versionNumber: 1,
+        isActive: true,
+        conditionsJson: JSON.stringify({ op: 'eq', field: 'sourceApp', value: 'SojadisPro' }),
+        pipelineJson: JSON.stringify({
+          steps: [
+            {
+              key: 'notify_team',
+              handler: 'email_notification',
+              input: { message: 'Event {{ event.id }}: {{ event.payload.name }}' },
+            },
+            { key: 'notify_manager', handler: 'email_notification' },
+          ],
+        }),
+      }
+    )
+
+    await SojalinkEvent.create({
       eventTypeId: eventType.id,
       sourceApp: 'SojadisPro',
-      payload: { id: 42 }, // no "name" field on purpose
+      sourceEntityType: 'scenario',
+      sourceEntityId: 4,
+      status: 'pending',
+      payloadJson: JSON.stringify({ id: 42 }),
     })
 
-    printExpectation(event.id, [
-      'event.status = failed',
-      'attempt.status = failed with error_code = InputResolutionError',
-      'exactly one step log (notify_team) in failed, with the error message',
-      'notify_manager was never executed (stop at first failure)',
-    ])
+    console.log('Seeder appliqué avec succès.')
   }
 }
