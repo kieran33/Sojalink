@@ -1,9 +1,3 @@
-/**
- * Typed engine errors. The error `name` is persisted as `error_code`
- * in `sojalink_attempts` / `sojalink_step_logs` and as
- * `resolution_error_code` on the event, so keep names stable.
- */
-
 export class RuleResolutionError extends Error {
   constructor(message: string) {
     super(message)

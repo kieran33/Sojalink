@@ -5,11 +5,6 @@ import type { ProcessingEvent } from '#domain/events/event'
 import { InvalidJsonError } from '#domain/events/errors'
 
 export class EventRepository {
-  /**
-   * Reserves the oldest pending event: sets it to `processing` inside a
-   * short transaction with a row lock, so two workers can never reserve
-   * the same event.
-   */
   async reserveNextPendingEvent(): Promise<ProcessingEvent | null> {
     return db.transaction(async (transaction) => {
       const event = await SojalinkEvent.query({ client: transaction })

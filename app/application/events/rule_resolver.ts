@@ -15,13 +15,6 @@ export type RuleResolution = {
   ruleVersionId: number
 }
 
-/**
- * Picks the single winning rule version for an event (strict V1):
- * - 0 matching rule -> NoMatchingRuleError
- * - several matching rules with the same best priority -> MultipleMatchingRulesError
- * - exactly 1 winner -> resolution persisted on the event
- * The lowest priority number wins.
- */
 @inject()
 export class RuleResolver {
   constructor(

@@ -8,13 +8,6 @@ import { StepExecutor } from '#application/events/step_executor'
 import { AttemptRepository } from '#persistence/events/attempt_repository'
 import { RuleVersionRepository } from '#persistence/events/rule_version_repository'
 
-/**
- * Executes the pipeline of an already-resolved event.
- *
- * Owns the attempt lifecycle (create -> success | failed) and the
- * sequential step execution with stop-at-first-failure. The final event
- * status is owned by the EventProcessor, not by the executor.
- */
 @inject()
 export class EventExecutor {
   constructor(

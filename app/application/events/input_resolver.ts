@@ -2,11 +2,6 @@ import { InputResolutionError } from '#domain/events/errors'
 import type { HandlerEvent, HandlerOutput } from '#domain/events/handler'
 import { getByPath } from '#application/events/object_path'
 
-/**
- * Context available to `{{ }}` references in a step input:
- * - `event.*` -> data of the current event (camelCase fields + payload)
- * - `steps.<key>.*` -> outputs of the previously executed steps
- */
 export type InputResolutionContext = {
   event: HandlerEvent
   steps: Record<string, HandlerOutput>
@@ -15,14 +10,6 @@ export type InputResolutionContext = {
 const TEMPLATE_PATTERN = /\{\{\s*([\w.[\]-]+)\s*\}\}/g
 const FULL_TEMPLATE_PATTERN = /^\{\{\s*([\w.[\]-]+)\s*\}\}$/
 
-/**
- * Resolves the `{{ event.xxx }}` / `{{ steps.<key>.xxx }}` references of a
- * step input, recursively. Handlers therefore never see a raw template.
- *
- * - a string that is exactly one reference keeps the referenced value type
- * - a reference embedded in a larger string is interpolated as text
- * - an unresolvable reference throws an InputResolutionError (the step fails)
- */
 export function resolveStepInput(
   input: Record<string, unknown>,
   context: InputResolutionContext
@@ -30,11 +17,6 @@ export function resolveStepInput(
   return resolveValue(input, context) as Record<string, unknown>
 }
 
-/**
- * Collects every `{{ }}` reference path used in a step input, without
- * resolving them. Used by the pipeline validator to check `steps.<key>`
- * references before execution.
- */
 export function collectInputReferences(input: Record<string, unknown> | undefined): string[] {
   const references: string[] = []
   collectFromValue(input, references)

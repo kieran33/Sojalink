@@ -3,10 +3,6 @@ import SojalinkAttempt from '#models/sojalink_attempt'
 import type { Attempt, AttemptStatus } from '#domain/events/attempt'
 
 export class AttemptRepository {
-  /**
-   * Creates the next attempt for an event. Refuses to create one while
-   * another attempt is still active (single active attempt per event).
-   */
   async createAttempt(eventId: number): Promise<Attempt> {
     const existingAttempts = await SojalinkAttempt.query()
       .where('eventId', eventId)
