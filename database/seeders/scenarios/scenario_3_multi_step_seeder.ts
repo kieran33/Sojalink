@@ -1,54 +1,65 @@
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
-import {
-  ensureScenarioGraph,
-  insertPendingEvent,
-  printExpectation,
-} from '#database/support/scenario_helpers'
+import SojalinkEventType from '#models/sojalink_event_type'
+import SojalinkRule from '#models/sojalink_rule'
+import SojalinkRuleVersion from '#models/sojalink_rule_version'
+import SojalinkEvent from '#models/sojalink_event'
 
-/**
- * Scenario 3 — multi-step pipeline with chained outputs.
- * Step 2 consumes the output of step 1 ({{ steps.notify_team.sent }}).
- *
- * Run while the worker is up:
- *   node ace db:seed --files "database/seeders/scenarios/scenario_3_multi_step_seeder.ts"
- */
 export default class Scenario3MultiStepSeeder extends BaseSeeder {
   static environment = ['development']
 
   async run() {
-    const { eventType } = await ensureScenarioGraph({
-      eventTypeCode: 'scenario.multi_step',
-      ruleCode: 'scenario-multi-step',
-      conditions: { op: 'eq', field: 'sourceApp', value: 'SojadisPro' },
-      pipeline: {
-        steps: [
-          {
-            key: 'notify_team',
-            handler: 'email_notification',
-            input: { message: 'Event {{ event.id }}: {{ event.payload.name }}' },
-          },
-          {
-            key: 'notify_manager',
-            handler: 'email_notification',
-            input: {
-              previous_sent: '{{ steps.notify_team.sent }}',
-              app: '{{ event.sourceApp }}',
-            },
-          },
-        ],
-      },
-    })
+    const eventType = await SojalinkEventType.updateOrCreate(
+      { code: 'scenario.multi_step' },
+      { code: 'scenario.multi_step', label: 'Scenario multi step', isActive: true }
+    )
 
-    const event = await insertPendingEvent({
+    const rule = await SojalinkRule.updateOrCreate(
+      { code: 'scenario-multi-step' },
+      {
+        code: 'scenario-multi-step',
+        label: 'Scenario multi step',
+        eventTypeId: eventType.id,
+        priority: 5,
+        isActive: true,
+      }
+    )
+
+    await SojalinkRuleVersion.updateOrCreate(
+      { ruleId: rule.id, versionNumber: 1 },
+      {
+        ruleId: rule.id,
+        versionNumber: 1,
+        isActive: true,
+        conditionsJson: JSON.stringify({ op: 'eq', field: 'sourceApp', value: 'SojadisPro' }),
+        pipelineJson: JSON.stringify({
+          steps: [
+            {
+              key: 'notify_team',
+              handler: 'email_notification',
+              input: { message: 'Event {{ event.id }}: {{ event.payload.name }}' },
+            },
+            {
+              key: 'notify_manager',
+              handler: 'email_notification',
+              input: {
+                previous_sent: '{{ steps.notify_team.sent }}',
+                app: '{{ event.sourceApp }}',
+              },
+            },
+          ],
+        }),
+      }
+    )
+
+    await SojalinkEvent.create({
       eventTypeId: eventType.id,
       sourceApp: 'SojadisPro',
-      payload: { name: 'commande multi-steps' },
+      sourceEntityType: 'scenario',
+      sourceEntityId: 3,
+      status: 'pending',
+      payloadJson: JSON.stringify({ name: 'commande multi-steps' }),
     })
 
-    printExpectation(event.id, [
-      'event.status = processed, attempt.status = success',
-      'two step logs in success, ordered by step_index (notify_team then notify_manager)',
-      'notify_manager input contains the output of notify_team: {"previous_sent": true, "app": "SojadisPro"}',
-    ])
+    console.log('Seeder appliqué avec succès.')
   }
 }
