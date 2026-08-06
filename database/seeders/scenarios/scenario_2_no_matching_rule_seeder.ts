@@ -41,7 +41,7 @@ export default class Scenario2NoMatchingRuleSeeder extends BaseSeeder {
       eventTypeId: eventType.id,
       sourceApp: 'UnknownApp',
       sourceEntityType: 'scenario',
-      sourceEntityId: 2,
+      sourceEntityId: Math.floor(Date.now() / 1000),
       status: 'pending',
       payloadJson: JSON.stringify({ name: 'event orphelin' }),
     })

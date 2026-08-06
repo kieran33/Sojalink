@@ -19,10 +19,10 @@ export default class extends BaseSchema {
       table.string('step_code', 100).notNullable().index()
       table.string('handler_name', 100).notNullable()
       table.string('status', 100).notNullable().index()
-      table.text('input_json').notNullable()
-      table.text('output_json').nullable()
+      table.text('input_json', 'longtext').notNullable()
+      table.text('output_json', 'longtext').nullable()
       table.string('error_code', 100).nullable()
-      table.text('error_message').nullable()
+      table.text('error_message', 'longtext').nullable()
       table.datetime('started_at').notNullable().defaultTo(this.now())
       table.datetime('finished_at').nullable()
 

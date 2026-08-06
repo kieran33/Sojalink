@@ -44,7 +44,7 @@ export default class Scenario5InvalidPipelineSeeder extends BaseSeeder {
       eventTypeId: eventType.id,
       sourceApp: 'SojadisPro',
       sourceEntityType: 'scenario',
-      sourceEntityId: 5,
+      sourceEntityId: Math.floor(Date.now() / 1000),
       status: 'pending',
       payloadJson: JSON.stringify({ name: 'pipeline invalide' }),
     })
