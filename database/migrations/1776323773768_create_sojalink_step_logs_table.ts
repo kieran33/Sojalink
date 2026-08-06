@@ -22,7 +22,7 @@ export default class extends BaseSchema {
       table.text('input_json', 'longtext').notNullable()
       table.text('output_json', 'longtext').nullable()
       table.string('error_code', 100).nullable()
-      table.text('error_message', 'longtext').nullable()
+      table.text('error_message').nullable()
       table.datetime('started_at').notNullable().defaultTo(this.now())
       table.datetime('finished_at').nullable()
 
