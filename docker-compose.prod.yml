@@ -33,7 +33,6 @@ services:
       - .env.prod
     volumes:
       - db_data:/var/lib/mysql
-      - ./init-db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "3306:3306"
     healthcheck:
