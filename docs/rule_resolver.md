@@ -4,9 +4,11 @@
 
 Le resolver de règles est le composant qui détermine quelle règle doit être appliquée à un événement.
 
-Un événement ne peut pas être traité correctement tant qu’aucune règle n’a été choisie. Le resolver intervient donc au début du traitement métier : il reçoit un événement en cours de traitement, cherche les règles compatibles avec cet événement, sélectionne une seule version de règle, puis enregistre le résultat sur l’événement.
+Un événement ne peut pas être traité correctement tant qu’aucune règle n’a été choisie. Le resolver intervient donc au début du traitement métier : il **reçoit** un événement déjà chargé et déjà en cours de traitement (transmis par `EventWorkflow`), cherche les règles compatibles avec cet événement, sélectionne une seule version de règle, puis enregistre le résultat sur l’événement.
 
-Le resolver ne déclenche pas l’exécution du pipeline. Son rôle est uniquement de résoudre la règle à utiliser.
+Le resolver ne charge jamais l’événement lui-même en base, et ne vérifie pas non plus son statut — ces deux étapes sont déjà faites en amont, au moment de la réservation par le worker (`EventRepository.reserveNextPendingEvent`).
+
+Le resolver ne déclenche pas l’exécution du pipeline. Son rôle est uniquement de résoudre la règle à utiliser, puis de renvoyer le résultat à `EventWorkflow`, qui enchaîne ensuite avec le moteur d’exécution.
 
 ## Termes utilisés
 
@@ -14,7 +16,7 @@ Un **event** est un événement reçu par SojaLink. Il contient notamment un typ
 
 Une **rule** est une règle métier rattachée à un type d’événement. Elle possède une priorité. Plus la priorité est basse, plus la règle est prioritaire.
 
-Une **rule version** est une version active d’une règle. C’est elle qui contient les conditions à évaluer et la définition du pipeline à exécuter ensuite. Si une règle possède plusieurs versions actives, seule la plus récente (`version_number` le plus élevé) est considérée par le resolver.
+Une **rule version** est une version active d’une règle. C’est elle qui contient les conditions à évaluer et la définition du pipeline à exécuter ensuite. Si une règle possède plusieurs versions actives, seule la plus récente (`version_number` le plus élevé) est chargée par le resolver — les autres versions actives plus anciennes ne sont jamais lues.
 
 Les **conditions** sont des critères JSON qui permettent de savoir si une règle correspond à un événement.
 
@@ -24,18 +26,17 @@ Le **snapshot de résolution** est une copie des informations principales de la 
 
 ## Fonctionnement général
 
-Le resolver est appelé lorsqu’un événement est passé au statut `processing`.
+Le resolver est appelé par `EventWorkflow.run()`, une fois que le worker a déjà réservé l’événement et l’a passé au statut `processing`.
 
 Le traitement suit cet ordre :
 
-1. Charger l’événement à résoudre.
-2. Vérifier que l’événement est bien en cours de traitement.
-3. Charger les règles actives liées au `event_type_id` de l’événement.
-4. Charger uniquement les versions actives de ces règles.
-5. Évaluer les conditions de chaque version de règle.
-6. Identifier les règles compatibles avec l’événement.
-7. Sélectionner une seule règle gagnante.
-8. Enregistrer le résultat de résolution sur l’événement.
+1. Recevoir l’événement en paramètre (déjà chargé, déjà en `processing` — le resolver ne le recharge jamais lui-même).
+2. Charger les règles actives liées au `event_type_id` de l’événement, chacune avec sa version active la plus récente.
+3. Évaluer les conditions de chaque version de règle.
+4. Identifier les règles compatibles avec l’événement.
+5. Sélectionner une seule règle gagnante.
+6. Enregistrer le résultat de résolution sur l’événement.
+7. Renvoyer le résultat (`ruleVersionId`) à l’appelant, sans que celui-ci ait besoin de relire l’événement en base.
 
 Le résultat est enregistré dans les champs suivants :
 
@@ -143,6 +144,8 @@ Cette règle est applicable uniquement si :
 
 Si une seule condition échoue, l’ensemble retourne `false`.
 
+L’évaluation est récursive : un `all` peut contenir un autre `all` imbriqué, sans limite de profondeur.
+
 ## Champs disponibles dans les conditions
 
 Les conditions sont évaluées à partir d’un contexte construit avec les données de l’événement.
@@ -150,11 +153,11 @@ Les conditions sont évaluées à partir d’un contexte construit avec les donn
 Les champs disponibles sont :
 
 | Champ              | Description                        |
-| ------------------ | ---------------------------------- |
+| ------------------ | ----------------------------------- |
 | `sourceApp`        | Application qui a émis l’événement |
 | `sourceEntityType` | Type d’entité source               |
 | `sourceEntityId`   | Identifiant de l’entité source     |
-| `payload`          | Données JSON métier de l’événement |
+| `payload`          | Données JSON métier de l’événement, déjà parsées en objet (pas une chaîne brute) |
 
 Exemples de chemins valides :
 
@@ -178,17 +181,17 @@ Exemples de chemins valides :
 
 ### Aucune règle applicable
 
-Si aucune règle ne correspond à l’événement, le resolver lève une erreur.
+Si aucune règle ne correspond à l’événement, le resolver lève une `NoMatchingRuleError`.
 
 L’événement ne reçoit pas de `applied_rule_version_id`.
 
-Le traitement de l’événement échoue et l’événement doit être marqué en erreur par le workflow appelant.
+Le traitement de l’événement échoue et l’événement est marqué `failed` par `EventProcessor`, l’appelant en amont de `EventWorkflow`.
 
 ### Plusieurs règles applicables avec la même priorité
 
-Si plusieurs règles correspondent à l’événement avec la même meilleure priorité, le resolver lève une erreur.
+Si plusieurs règles correspondent à l’événement avec la même meilleure priorité, le resolver lève une `MultipleMatchingRulesError`.
 
-Ce cas est considéré comme ambigu : le système ne peut pas choisir de manière fiable quelle règle appliquer.
+Ce cas est considéré comme ambigu : le système ne peut pas choisir de manière fiable quelle règle appliquer, et refuse volontairement de trancher au hasard.
 
 ### Conditions invalides
 
@@ -200,7 +203,9 @@ Le resolver ne sélectionne pas la règle concernée.
 
 Quand une règle est trouvée, le resolver enregistre l’identifiant de la version sélectionnée dans `applied_rule_version_id`, la date de résolution dans `resolved_at`, et un snapshot de résolution dans `resolution_snapshot_json`.
 
-En cas d’échec de résolution (aucune règle, ou plusieurs règles à la même priorité), le resolver enregistre le code et le message d’erreur dans `resolution_error_code` et `resolution_error_message` avant de lever une erreur typée (`NoMatchingRuleError`, `MultipleMatchingRulesError`).
+En cas d’échec de résolution (aucune règle, ou plusieurs règles à la même priorité), le resolver enregistre le code et le message d’erreur dans `resolution_error_code` et `resolution_error_message` avant de lever l’erreur typée correspondante (`NoMatchingRuleError`, `MultipleMatchingRulesError`).
+
+Cette double sauvegarde (succès ou échec) est centralisée dans une méthode privée du resolver, pour éviter de dupliquer la logique de persistance à deux endroits différents du code.
 
 Exemple de snapshot :
 
@@ -225,17 +230,16 @@ Ce snapshot permet de savoir :
 
 Le resolver doit :
 
-* charger l’événement à traiter
-* vérifier que l’événement est en cours de traitement
-* charger les règles actives liées au type d’événement
-* charger les versions actives de ces règles
+* recevoir l’événement déjà chargé et déjà en cours de traitement
+* charger les règles actives liées au type d’événement, avec leur version active la plus récente
 * évaluer les conditions
 * choisir une seule version de règle
-* enregistrer la résolution sur l’événement
-* signaler explicitement les cas d’erreur
+* enregistrer la résolution (ou l’échec) sur l’événement
+* renvoyer le résultat à l’appelant
 
 Le resolver ne doit pas :
 
+* charger ou revérifier l’événement lui-même en base
 * exécuter le pipeline
 * modifier les règles
 * créer de nouvelles versions de règles
@@ -245,13 +249,15 @@ Le resolver ne doit pas :
 ## Fichiers concernés
 
 | Fichier                                              | Rôle                                                                                    |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `app/application/events/rule_resolver.ts`            | Contient la logique principale de résolution                                            |
-| `app/application/events/evaluate_rule_conditions.ts` | Évalue les conditions d’une règle                                                       |
-| `app/application/events/event_workflow.ts`           | Appelle le resolver puis l’executor pendant le workflow de traitement                   |
+| `app/application/events/evaluate_rule_conditions.ts` | Évalue les conditions d’une règle, récursivement pour les `all` imbriqués               |
+| `app/application/events/event_workflow.ts`           | Appelle le resolver puis transmet le résultat directement à l’executor                  |
 | `app/application/events/event_processor.ts`          | Réserve un événement, lance le workflow et marque l’événement comme traité ou en erreur |
 | `app/persistence/events/rule_repository.ts`          | Charge les règles actives avec leur dernière version active                             |
-| `app/persistence/events/event_repository.ts`         | Charge l’événement en cours et persiste le résultat (ou l’échec) de résolution          |
+| `app/persistence/events/event_repository.ts`         | Persiste le résultat (ou l’échec) de résolution sur l’événement                         |
+
+> ⚠️ **À vérifier** : `EventRepository.findProcessingEvent(eventId)` existe toujours dans le code, mais ne semble plus appelé nulle part dans le flux actuel (`EventWorkflow.run()` reçoit directement l’événement en paramètre, sans jamais le recharger). À confirmer par une recherche dans le code — si c'est bien le cas, cette méthode est un reliquat d'une version antérieure du flux, avant que le paramètre `event` ne soit transmis directement de bout en bout.
 
 ## Exemple de cycle complet
 
@@ -259,19 +265,19 @@ Un événement est créé avec le statut `pending`.
 
 Le worker réserve cet événement et le passe en `processing`.
 
-Le workflow appelle le resolver.
+`EventProcessor` appelle `EventWorkflow.run(event)`, en lui transmettant directement l’événement déjà chargé.
 
-Le resolver charge les règles actives correspondant au type d’événement.
+`EventWorkflow` appelle le resolver avec ce même événement.
 
-Chaque version active est testée avec ses conditions.
+Le resolver charge les règles actives correspondant au type d’événement, chacune avec sa version active la plus récente.
+
+Chaque version est testée avec ses conditions.
 
 Une règle compatible est trouvée.
 
-Le resolver enregistre la version sélectionnée dans `applied_rule_version_id`.
+Le resolver enregistre la version sélectionnée dans `applied_rule_version_id` et un snapshot dans `resolution_snapshot_json`, puis renvoie `{ ruleVersionId }`.
 
-Le resolver enregistre un snapshot dans `resolution_snapshot_json`.
-
-Le workflow peut ensuite continuer le traitement de l’événement.
+`EventWorkflow` transmet directement ce `ruleVersionId` à l’executor, sans jamais relire l’événement en base.
 
 ## Règle importante
 

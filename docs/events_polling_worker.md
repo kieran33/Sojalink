@@ -1,8 +1,22 @@
 # Note de conception - Worker de polling SojaLink
 
-Date : 2026-05-21
-Auteur(s) : Emilien BILLY
-Statut : Livré
+Date : 2026-05-21 (mise à jour : 2026-08-06)
+Statut : Livré — V1 étendue (traitement métier complet désormais implémenté)
+
+---
+
+## 0. Note de mise à jour
+
+Ce document décrivait initialement la V1 du worker de polling, limitée à la
+réservation d'un événement (jusqu'au passage en `processing`), le traitement
+métier complet étant explicitement hors périmètre.
+
+**Ce périmètre a depuis été étendu** : le traitement métier complet (résolution
+de règle, exécution du pipeline, gestion des handlers) est maintenant implémenté
+et documenté séparément (`docs/rule_resolver.md`, `docs/runtime_executor.md`,
+`docs/handler_registry.md`). Ce document a été mis à jour pour refléter
+l'architecture réelle des fichiers, mais garde son objet initial : le mécanisme
+de polling et de réservation atomique.
 
 ---
 
@@ -12,7 +26,7 @@ La feature permet de prendre régulièrement un événement avec le statut `pend
 
 Le worker ne doit jamais permettre à deux exécutions concurrentes de réserver le même événement.
 
-La V1 couvre le polling, la réservation et le déclenchement du traitement. Le traitement métier complet de l'événement reste hors périmètre.
+La V1 couvrait le polling, la réservation et le déclenchement du traitement. Le traitement métier complet est désormais implémenté en aval de la réservation (voir section 0).
 
 ---
 
@@ -27,7 +41,7 @@ La V1 doit permettre de :
 - renseigner `processing_started_at` ;
 - ignorer les événements déjà `processing` ;
 - garantir qu'un événement ne peut pas être réservé par deux workers concurrents ;
-- fournir un point d'entrée minimal pour le futur traitement métier.
+- fournir un point d'entrée pour le traitement métier.
 
 La feature est considérée utilisable lorsque :
 
@@ -41,12 +55,16 @@ La feature est considérée utilisable lorsque :
 
 ## 3. Hors périmètre
 
-La V1 ne couvre pas :
+Hors périmètre du **worker de polling lui-même** (couvert par ailleurs, voir
+section 0) :
 
-- le traitement métier complet des événements ;
-- la stratégie de reprise des événements bloqués ;
-- le retry applicatif des événements échoués ;
-- la définition complète des workflows métier par type d'event.
+- la stratégie de reprise des événements bloqués (event resté en `processing`
+  après un crash worker) — toujours hors périmètre, non implémenté ;
+- le retry applicatif des événements échoués — conçu (voir diagramme d'activité)
+  mais non implémenté, prévu V2.
+
+Le traitement métier des événements (résolution de règle, exécution du
+pipeline) n'est plus hors périmètre — voir section 0.
 
 ---
 
@@ -60,14 +78,16 @@ Techniquement, il est stocké dans la table `sojalink_events`.
 
 ### Statut d'un event
 
-Valeurs actuelles :
+Valeurs actuelles, inchangées depuis la V1 :
 
 - `pending`
 - `processing`
 - `processed`
 - `failed`
 
-La réservation manipule `pending` et `processing`. Le use case sait aussi marquer `processed` et `failed`.
+La réservation manipule `pending` et `processing`. Le statut final (`processed`
+ou `failed`) est désormais décidé par `EventProcessor`, une fois le traitement
+métier complet terminé (pas seulement un stub comme en V1 initiale).
 
 ### Worker de polling
 
@@ -92,7 +112,9 @@ Cette étape doit être atomique.
 3. Le worker verrouille l'événement.
 4. Le worker passe l'événement en `processing`.
 5. Le worker renseigne `processing_started_at`.
-6. Le worker transmet l'événement au use case de traitement.
+6. Le worker transmet l'événement au traitement métier complet (résolution de
+   règle puis exécution du pipeline — voir `docs/rule_resolver.md` et
+   `docs/runtime_executor.md`).
 
 Résultat attendu :
 
@@ -110,7 +132,9 @@ Résultat attendu :
 Résultat attendu :
 
 - aucun événement n'est modifié ;
-- un log indique qu'aucun événement n'est disponible.
+- un log de niveau `debug` indique qu'aucun événement n'est disponible
+  (`"No pending event available"`) ;
+- le passage du worker est tout de même enregistré dans Redis (voir section 8).
 
 ### Cas 3 - Deux workers concurrents
 
@@ -137,7 +161,8 @@ Résultat attendu :
 - `processing_started_at` doit être renseigné au moment de la réservation ;
 - la table `sojalink_events` reste la source de vérité métier ;
 - Adonis Queue sert à planifier et exécuter régulièrement le polling ;
-- le traitement métier doit être isolé de la logique de réservation.
+- le statut final de l'événement (`processed`/`failed`) est décidé à un seul
+  endroit (`EventProcessor`), jamais dupliqué ailleurs dans le code.
 
 ---
 
@@ -162,14 +187,25 @@ Résultat attendu :
 - `payload_json`
 - `applied_rule_version_id`
 - `resolution_snapshot_json`
+- `resolution_error_code`
+- `resolution_error_message`
 - `created_at`
 - `processing_started_at`
+- `resolved_at`
 - `processed_at`
+- `failed_at`
 - `updated_at`
 
-### Unicité
+> Les champs `resolution_error_code`, `resolution_error_message`,
+> `resolved_at` et `failed_at` ont été ajoutés depuis la V1 initiale, pour
+> tracer précisément les échecs de résolution de règle.
 
-La branche courante ne s'appuie plus sur `source_event_id`, `correlation_key` ni `occurred_at` dans `sojalink_events`.
+> ⚠️ **Type de colonne** : `payload_json` et `resolution_snapshot_json` sont
+> déclarées en `table.text(...)`, pas `table.json(...)` — un type `JSON` natif
+> se comporte différemment entre MariaDB (dev/CI) et MySQL (production Railway),
+> ce qui a causé un bug réel de production (voir la note de déploiement).
+
+### Unicité
 
 L'idempotence de l'event est assurée par une contrainte unique composite sur :
 
@@ -184,7 +220,7 @@ Le worker sélectionne les événements dans l'ordre suivant :
 
 1. `created_at ASC`
 
-Cet ordre permet de traiter les événements dans l'ordre de leur insertion dans SojaLink.
+Cet ordre permet de traiter les événements dans l'ordre de leur insertion dans SojaLink (FIFO).
 
 ---
 
@@ -193,15 +229,27 @@ Cet ordre permet de traiter les événements dans l'ordre de leur insertion dans
 ### Découpage actuel
 
 ```txt
+start/scheduler.ts
 app/jobs/poll_pending_events_job.ts
 app/application/events/pending_events_worker.ts
-app/application/events/process_next_pending_event.ts
 app/application/events/event_processor.ts
+app/application/events/event_workflow.ts
+app/application/events/rule_resolver.ts
+app/application/events/event_executor.ts
 app/persistence/events/event_repository.ts
-start/scheduler.ts
+app/persistence/events/worker_health_repository.ts
 ```
 
+> Le fichier `process_next_pending_event.ts` mentionné dans une version
+> antérieure de ce document n'existe plus — son rôle a été repris par
+> `event_workflow.ts`.
+
 ### Rôle des fichiers
+
+`start/scheduler.ts` :
+
+- planifie l'exécution régulière du job ;
+- ne schedule rien quand `NODE_ENV=test`.
 
 `poll_pending_events_job.ts` :
 
@@ -212,34 +260,51 @@ start/scheduler.ts
 `pending_events_worker.ts` :
 
 - sert d'entrée application pour le job ;
-- délègue au use case `ProcessNextPendingEvent`.
-
-`process_next_pending_event.ts` :
-
-- orchestre la réservation, l'appel au processor et la mise à jour finale de statut ;
-- marque l'event en `processed` ou `failed`.
+- délègue à `EventProcessor.process()` ;
+- mesure la durée du tick et appelle `WorkerHealthRepository.recordRun()`
+  systématiquement, que le tick ait traité un événement ou non.
 
 `event_processor.ts` :
 
-- contient le stub du futur traitement métier.
+- orchestre le cycle complet : réserve l'événement via `EventRepository`,
+  lance `EventWorkflow.run()`, décide seul du statut final
+  (`processed`/`failed`) ;
+- en cas d'échec, log l'erreur mais ne la relance pas (un échec métier n'est
+  pas une panne du job de queue).
+
+`event_workflow.ts` :
+
+- enchaîne `RuleResolver.resolve()` puis `EventExecutor.execute()` ;
+- transmet directement le `ruleVersionId` résolu à l'executor, sans relire
+  l'événement en base.
+
+`rule_resolver.ts` :
+
+- trouve la règle applicable à l'événement (voir `docs/rule_resolver.md`).
+
+`event_executor.ts` :
+
+- exécute le pipeline de la règle résolue (voir `docs/runtime_executor.md`).
 
 `event_repository.ts` :
 
 - contient la logique de réservation atomique ;
 - ouvre la transaction SQL ;
 - sélectionne un événement `pending` ;
-- le passe en `processing`.
+- le passe en `processing` ;
+- persiste le statut final, la résolution de règle (succès ou échec).
 
-`start/scheduler.ts` :
+`worker_health_repository.ts` :
 
-- planifie l'exécution régulière du job ;
-- ne schedule rien quand `NODE_ENV=test`.
+- composant NoSQL (Redis) qui trace la santé du worker : heure du dernier
+  passage, durée moyenne des 20 derniers ticks — indépendant de MariaDB, donné
+  éphémère non critique.
 
 ---
 
 ## 9. Réservation concurrente
 
-Principe actuel :
+Principe actuel, inchangé depuis la V1 :
 
 ```ts
 const event = await SojalinkEvent.query({ client: transaction })
@@ -267,16 +332,26 @@ Le scheduler planifie régulièrement le job de polling.
 Code actuel :
 
 ```ts
+export function shouldSchedulePolling(nodeEnv = process.env.NODE_ENV) {
+  return nodeEnv !== 'test'
+}
+
 if (shouldSchedulePolling()) {
   await PollPendingEventsJob.schedule({}).every('10s')
 }
 ```
 
-Le worker Queue doit être lancé dans un process dédié :
+Le worker Queue doit être lancé dans un process dédié, **distinct du serveur
+web** :
 
 ```bash
 node ace queue:work --queue=pending_events
 ```
+
+> En production (Railway), ce process tourne dans un service séparé
+> (`worker-pending-events`), partageant la même image Docker que le service
+> web mais avec une commande de démarrage différente. Voir la note de
+> déploiement.
 
 ---
 
@@ -285,9 +360,11 @@ node ace queue:work --queue=pending_events
 Le worker doit produire des logs clairs pour les cas suivants :
 
 - démarrage d'un cycle de polling ;
-- aucun événement disponible ;
-- événement réservé ;
-- erreur pendant le traitement ;
+- aucun événement disponible (niveau `debug`) ;
+- événement réservé, règle résolue, exécution du pipeline, résultat final
+  (niveau `info`) ;
+- erreur pendant le traitement (niveau `error`, avec le détail complet de
+  l'erreur, `type`/`message`/`stack`) ;
 - échec définitif du job Queue.
 
 Les logs utilisent le logger Adonis.
@@ -296,7 +373,8 @@ Les logs utilisent le logger Adonis.
 
 ## 12. Tests attendus
 
-Les tests couvrent actuellement :
+Les tests couvrent actuellement (répartis sur plusieurs fichiers, voir
+`tests/unit/`) :
 
 - un événement `pending` passe en `processing` ;
 - `processing_started_at` est renseigné ;
@@ -305,7 +383,9 @@ Les tests couvrent actuellement :
 - un seul événement est réservé par cycle ;
 - deux workers concurrents ne réservent pas le même événement ;
 - le job délègue au worker ;
-- le scheduler ne planifie rien pendant les tests.
+- le scheduler ne planifie rien pendant les tests ;
+- le composant `WorkerHealthRepository` signale correctement l'absence de
+  passage, et détecte un passage récent une fois `recordRun` appelé.
 
 ---
 
@@ -322,7 +402,7 @@ La feature est terminée lorsque :
 - la réservation est atomique ;
 - deux workers concurrents ne peuvent pas réserver le même événement ;
 - la logique métier est séparée du job Queue ;
-- un fichier de traitement minimal existe ;
+- le traitement métier complet est déclenché après la réservation ;
 - les tests de concurrence passent ;
 - une documentation explique le fonctionnement du worker.
 
@@ -336,12 +416,14 @@ La feature est terminée lorsque :
 - Un cycle de polling réserve au maximum un événement.
 - La réservation est faite dans une transaction SQL.
 - La réservation utilise `FOR UPDATE` et `SKIP LOCKED`.
-- Le traitement métier réel est hors périmètre de la V1.
-- Le fichier de traitement existe dès la V1 sous forme minimale.
+- Le traitement métier réel, initialement hors périmètre V1, est désormais
+  implémenté (résolution de règle + exécution de pipeline).
 - Les logs passent par le logger Adonis.
 - Les tests de concurrence sont obligatoires.
-- `sojalink_events` s'ordonne par `created_at` pour le polling.
+- `sojalink_events` s'ordonne par `created_at` pour le polling (FIFO).
 - `sojalink_events` utilise une contrainte unique composite sur la source et le type d'event.
+- Un composant Redis (`WorkerHealthRepository`) trace la santé du worker,
+  indépendamment de MariaDB — donnée éphémère, non critique.
 
 ---
 
@@ -353,9 +435,8 @@ Question :
 
 Que faire si un événement reste bloqué en `processing` après un crash worker ?
 
-Proposition V1 :
-
-Hors périmètre. Une issue dédiée devra définir une stratégie de reprise basée sur `processing_started_at`.
+Statut : **toujours ouvert, non implémenté.** Une issue dédiée devra définir
+une stratégie de reprise basée sur `processing_started_at`.
 
 ### 2. Fréquence de polling
 
@@ -363,9 +444,8 @@ Question :
 
 Le job doit-il tourner toutes les 10 secondes, toutes les 30 secondes ou toutes les minutes ?
 
-Proposition V1 :
-
-Toutes les 10 secondes.
+Statut : **tranché.** 10 secondes, validé en développement comme en
+production.
 
 ### 3. Backend Queue
 
@@ -373,6 +453,19 @@ Question :
 
 Adonis Queue doit-il utiliser le driver database ou Redis ?
 
-Proposition V1 :
+Statut : **tranché pour la queue elle-même** — le driver `database` est
+conservé en production (`QUEUE_DRIVER=database`), aucun besoin identifié de
+passer sur un driver Redis pour la queue à ce stade. Redis est en revanche
+utilisé pour un besoin différent : la supervision du worker (voir section 8,
+`worker_health_repository.ts`), pas pour la queue elle-même.
 
-Le driver database est acceptable en développement. Redis pourra être envisagé en production si le volume ou la fiabilité attendue le justifie.
+### 4. Retry automatique des événements échoués
+
+Question :
+
+Faut-il relancer automatiquement un événement échoué plusieurs fois avant de
+le marquer définitivement `failed` ?
+
+Statut : **conçu, non implémenté.** Visible dans le diagramme d'activité de
+conception (compteur de tentatives, maximum 3). Prévu pour une version
+ultérieure (V2).

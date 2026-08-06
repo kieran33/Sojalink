@@ -1,17 +1,35 @@
 # Guide de déploiement SojaLink sur Railway
 
-Guide complet pour déployer SojaLink en production sur Railway via Docker.
+Guide complet du déploiement réel de SojaLink en production sur Railway, via GitHub
+Container Registry (GHCR) et une pipeline CI/CD automatisée.
+
+---
+
+## Vue d'ensemble de l'architecture de déploiement
+
+SojaLink tourne sur Railway avec **quatre services séparés** :
+
+| Service | Rôle | Commande de démarrage |
+|---|---|---|
+| `sojalink-deployment` | Serveur web | `node bin/server.js` (via docker-entrypoint.js) |
+| `worker-pending-events` | Worker de polling | `node ace queue:work --queue=pending_events` |
+| MySQL (MariaDB) | Base de données | géré par Railway |
+| Redis | Composant NoSQL (supervision worker) | géré par Railway |
+
+Les deux premiers services partagent **exactement la même image Docker**
+(`ghcr.io/kieran33/sojalink-deployment:latest`) — seule la commande de démarrage
+diffère. Ils doivent toujours être redéployés ensemble, jamais séparément.
 
 ---
 
 ## Prérequis
 
-Avant de commencer, vérifier que tu as :
-
-- Un compte Docker Hub — [hub.docker.com](https://hub.docker.com) (gratuit)
-- Un compte Railway — [railway.com](https://railway.com) (gratuit avec $5 de crédit)
-- Docker Desktop installé et lancé sur ton poste
-- Le projet SojaLink en local avec le `Dockerfile` et `docker-entrypoint.js`
+- Un compte GitHub (le repo `kieran33/Sojalink` sert de copie personnelle pour
+  déployer en autonomie, séparée du repo de l'organisation `sojadis-equipement`)
+- Un compte Railway — [railway.com](https://railway.com)
+- La CLI Railway installée en local : `npm i -g @railway/cli`
+- Docker Desktop installé et lancé (pour builder l'image en local si besoin)
+- Node.js ≥ 24 en local
 
 ---
 
@@ -41,28 +59,44 @@ COPY --from=build /app/build ./
 COPY --from=build /app/docker-entrypoint.js ./
 RUN npm ci --omit=dev
 
-EXPOSE 8080
+EXPOSE 3333
 CMD ["node", "docker-entrypoint.js"]
 ```
 
 ### `docker-entrypoint.js`
 
-Ce fichier lance les migrations automatiquement avant de démarrer le serveur :
+Applique les migrations en attente avant de démarrer le serveur — **sans jamais
+supprimer les données existantes**.
 
 ```javascript
 import { execSync } from 'node:child_process'
 
-console.log('Resetting database...')
+console.log('Running migrations...')
 try {
-  execSync('node ace migration:fresh --force', { stdio: 'inherit' })
-  console.log('Migration done.')
+  execSync('node ace migration:run --force', { stdio: 'inherit' })
+  console.log('Migrations done.')
 } catch (error) {
-  console.log('Migration failed, continuing...')
+  console.error('Migration failed:', error)
+  process.exit(1)
 }
 
 console.log('Starting server...')
 await import('./bin/server.js')
 ```
+
+> ⚠️ **Ne jamais utiliser `migration:fresh` ici.** Cette commande supprime toutes
+> les tables à chaque redémarrage du conteneur — testé et confirmé en production,
+> ça efface aussi bien les données métier que la table interne `queue_schedules`
+> (voir la section Problèmes rencontrés).
+
+### Migrations — colonnes JSON
+
+> ⚠️ **Toutes les colonnes `*_json` doivent être déclarées en `table.text(...)`,
+> jamais en `table.json(...)`.** MariaDB (utilisé en local et en CI) traite `JSON`
+> comme un simple alias de `TEXT`, mais MySQL (utilisé par Railway en production) a
+> un vrai type `JSON` natif que le driver désérialise automatiquement en objet —
+> ce qui casse le code applicatif, qui s'attend à recevoir une chaîne de
+> caractères à parser lui-même. Bug réel rencontré et corrigé en production.
 
 ### `.dockerignore`
 
@@ -74,179 +108,273 @@ build
 .git
 ```
 
-> ⚠️ Les migrations utilisent `varchar(100)` au lieu de `varchar(255)` pour éviter l'erreur de clé trop longue sur MySQL.
-
 ---
 
-## Etape 1 — Builder et pousser l'image sur Docker Hub
+## Étape 1 — La pipeline CI/CD (méthode utilisée en pratique)
 
-### Se connecter à Docker Hub
+Le déploiement ne se fait **jamais manuellement** — un simple push sur `main`
+déclenche automatiquement toute la chaîne, via
+`.github/workflows/test-build-publish-deploy.yml` :
 
-```bash
-docker login
+```
+push sur main
+    ↓
+test (Japa, contre MariaDB + Redis éphémères)
+    ↓ (si succès)
+build-and-publish (image Docker construite, poussée sur GHCR)
+    ↓ (si succès)
+deploy (redéploie les DEUX services Railway)
 ```
 
-Entre ton username et mot de passe Docker Hub.
+### Ce qu'il faut configurer une seule fois
 
-### Builder l'image
+**1. Le package GHCR doit être public.** Railway n'authentifie pas correctement
+sur un package GHCR privé (testé, confirmé en échec). Sur GitHub :
+`Packages` → `sojalink-deployment` → `Package settings` → `Change visibility` →
+`Public`.
 
-```bash
-docker build -t ton_username/sojalink:latest .
+**2. Le lien entre le package et le repo, pour que le workflow ait le droit d'y
+publier.** Un package poussé manuellement une première fois n'est pas
+automatiquement lié à un repo Actions :
+`Package settings` → `Manage Actions access` → `Add Repository` → `Sojalink`,
+rôle `Write`.
+
+**3. Les permissions du workflow.** Repo → `Settings` → `Actions` → `General` →
+`Workflow permissions` → `Read and write permissions`.
+
+**4. Le secret `RAILWAY_TOKEN`.** Généré depuis Railway :
+`Project Settings` → `Tokens` → `New Token` (**un token de projet, pas un token
+de compte personnel**), puis ajouté dans
+`Settings` → `Secrets and variables` → `Actions` du repo GitHub.
+
+### Le job `deploy` du workflow
+
+```yaml
+deploy:
+  needs: build-and-publish
+  environment: production
+  runs-on: ubuntu-latest
+
+  steps:
+    - name: Deploy web service to Railway
+      run: |
+        npm i -g @railway/cli
+        railway redeploy --service sojalink-deployment --yes
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+    - name: Deploy worker service to Railway
+      run: railway redeploy --service worker-pending-events --yes
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 ```
 
-Remplace `ton_username` par ton vrai username Docker Hub. Le build prend quelques minutes.
-
-### Pousser l'image sur Docker Hub
-
-```bash
-docker push ton_username/sojalink:latest
-```
-
-L'image est maintenant disponible publiquement sur Docker Hub.
+> ⚠️ **Les deux services doivent toujours être redéployés ensemble.** Rencontré
+> en production : sans la deuxième étape, le worker continuait de tourner avec
+> une ancienne version de l'image, désynchronisée du service web.
 
 ---
 
-## Etape 2 — Créer le projet sur Railway
+## Étape 2 — Créer les services sur Railway (setup initial, une seule fois)
 
-1. Va sur [railway.com](https://railway.com) et connecte-toi avec ton compte GitHub
-2. Clique sur **New Project**
-3. Choisis **Deploy a Docker Image**
-4. Entre le nom de ton image : `ton_username/sojalink:latest`
+### Service web
 
-> L'application va crasher — c'est normal, les variables d'environnement ne sont pas encore configurées.
+1. Railway → `New Project` → `Deploy a Docker Image`
+2. Image : `ghcr.io/kieran33/sojalink-deployment:latest`
+3. Nommer le service `sojalink-deployment`
 
----
+### Service worker
 
-## Etape 3 — Ajouter MySQL
+1. `+ Create` → `Empty Service` (ou `Deploy from Docker Image`)
+2. Même image : `ghcr.io/kieran33/sojalink-deployment:latest`
+3. `Settings` → `Deploy` → `Custom Start Command` :
+   ```
+   node ace queue:work --queue=pending_events
+   ```
+4. Nommer le service `worker-pending-events`
 
-Dans ton projet Railway :
+### Base de données MySQL
 
-1. Ferme le panneau de ton service sojalink
-2. Clique sur le bouton **+** pour ajouter un service
-3. Choisis **Database** puis **MySQL**
-4. Railway crée automatiquement la base MySQL et génère les variables de connexion
+`+ New` → `Database` → `Add MySQL` — Railway crée le service et génère
+automatiquement les variables de connexion (`MYSQLHOST`, `MYSQLPORT`,
+`MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD`).
 
-### Récupérer les variables MySQL
+### Redis
 
-Dans ton service MySQL, va dans l'onglet **Variables**. Note ces valeurs :
-
-| Variable Railway | Variable SojaLink | Description |
-|---|---|---|
-| `MYSQLHOST` | `DB_HOST` | Host privé Railway (mysql-xxx.railway.internal) |
-| `MYSQLPORT` | `DB_PORT` | Port (3306) |
-| `MYSQLDATABASE` | `DB_DATABASE` | Nom de la base |
-| `MYSQLUSER` | `DB_USER` | Utilisateur |
-| `MYSQLPASSWORD` | `DB_PASSWORD` | Mot de passe |
-
-> ⚠️ Utilise toujours le réseau privé Railway (`mysql-xxx.railway.internal`) pour `DB_HOST` et non le réseau public.
+`+ New` → `Database` → `Add Redis` — Railway génère `REDISHOST`, `REDISPORT`,
+`REDISPASSWORD` (**sans underscore** dans ces noms-là, à ne pas confondre avec
+les variables `REDIS_HOST` côté application, voir plus bas).
 
 ---
 
-## Etape 4 — Configurer les variables d'environnement
+## Étape 3 — Configurer les variables d'environnement
 
-Dans ton service sojalink sur Railway, va dans l'onglet **Variables** et ajoute :
+**Sur les DEUX services** (`sojalink-deployment` et `worker-pending-events`) —
+les mêmes variables, saisies dans l'onglet `Variables` de chacun :
 
 ```env
-NODE_ENV=production
-PORT=8080
-HOST=0.0.0.0
-APP_KEY=genere_avec_node_ace_generate_key
-APP_URL=https://ton-app.up.railway.app
-LOG_LEVEL=info
-SESSION_DRIVER=cookie
-QUEUE_DRIVER=database
-DB_HOST=mysql-xxx.railway.internal
-DB_PORT=3306
+APP_KEY=<clé générée avec node ace generate:key>
+APP_URL=https://sojalink-deployment-production.up.railway.app
 DB_DATABASE=railway
+DB_HOST=<host interne MySQL fourni par Railway>
+DB_PASSWORD=<mot de passe généré par Railway>
+DB_PORT=3306
 DB_USER=root
-DB_PASSWORD=ton_mot_de_passe_mysql
+HOST=0.0.0.0
+PORT=3333
+LOG_LEVEL=info
+QUEUE_DRIVER=database
+SESSION_DRIVER=cookie
+REDIS_HOST=${{Redis.REDISHOST}}
+REDIS_PORT=${{Redis.REDISPORT}}
+REDIS_PASSWORD=${{Redis.REDISPASSWORD}}
 ```
 
-Pour générer `APP_KEY`, lance cette commande en local :
+> ⚠️ La syntaxe `${{Redis.REDISHOST}}` référence directement le service Redis —
+> si Railway régénère cette valeur, la référence se met à jour automatiquement,
+> pas besoin de la retaper. Vérifie que `Redis` correspond bien au nom exact de
+> ton service.
 
+Pour générer `APP_KEY` en local :
 ```bash
 node ace generate:key
 ```
 
-Copie la valeur générée dans la variable `APP_KEY` sur Railway.
+---
 
-Une fois toutes les variables ajoutées, clique sur **Deploy** pour appliquer les changements.
+## Étape 4 — Exposer le service web publiquement
+
+`sojalink-deployment` → `Settings` → `Networking` → `Generate Domain`.
+
+> ⚠️ **Le piège du port.** Railway injecte automatiquement une variable `PORT`
+> dans le conteneur (réglée par défaut sur `8080` si tu ne la définis pas
+> toi-même). Le port cible du domaine public doit **toujours correspondre
+> exactement** à la valeur de la variable `PORT` — un décalage entre les deux
+> rend l'application inaccessible malgré un déploiement affiché comme réussi.
+> Ici, `PORT=3333` est explicitement défini (étape 3), donc le port cible du
+> domaine doit aussi être réglé sur `3333`, pas laissé sur `8080` par défaut.
+
+Le service worker n'a besoin d'aucun domaine public — il ne reçoit jamais de
+trafic HTTP.
 
 ---
 
-## Etape 5 — Générer le domaine public
+## Étape 5 — Vérifier le déploiement
 
-Dans ton service sojalink :
+### Logs du service web
 
-1. Va dans l'onglet **Settings**
-2. Dans la section **Networking**, clique sur **Generate Domain**
-3. Entre le port `8080`
-4. Railway génère une URL publique du type : `https://sojalink-production.up.railway.app`
-5. Mets à jour `APP_URL` avec cette URL dans tes variables
-
----
-
-## Etape 6 — Vérifier le déploiement
-
-Dans l'onglet **Deployments** de ton service sojalink, vérifie les logs. Tu dois voir :
-
+`Deployments` → dernier déploiement → `View Logs` :
 ```
-Resetting database...
-[ success ] Dropped tables successfully
-migrated database/migrations/...
-...
-Migration done.
+Running migrations...
+Migrations done.
 Starting server...
-started HTTP server on 0.0.0.0:8080
+started HTTP server on 0.0.0.0:3333
 ```
 
-Ouvre l'URL Railway dans ton navigateur — tu dois voir la page d'accueil de SojaLink.
+### Logs du service worker
+
+```
+Starting Container
+Starting worker for queues: pending_events
+```
+
+### Test complet, en conditions réelles
+
+```bash
+railway ssh --service worker-pending-events
+NODE_ENV=development node ace db:seed --files="database/seeders/scenarios/scenario_1_nominal_seeder.ts"
+```
+
+Puis observer les logs du worker (`railway logs --service worker-pending-events`
+depuis un autre terminal) — la séquence complète doit apparaître dans les 10
+secondes :
+```
+Pending event reserved for processing
+Rule resolved
+Email notification sent
+Pipeline executed successfully
+Event processed successfully
+```
+
+> Note : les seeders de scénario sont bloqués par défaut en production
+> (`static environment = ['development']`) — `NODE_ENV=development` en préfixe
+> de la commande contourne ça temporairement, sans affecter le vrai serveur qui
+> continue de tourner en production.
 
 ---
 
 ## Mettre à jour en production
 
-Pour déployer une nouvelle version après des modifications :
+Un simple push sur `main` (après merge d'une Pull Request) déclenche
+automatiquement toute la pipeline — aucune commande manuelle à taper.
 
+Pour forcer un redéploiement sans nouveau commit :
 ```bash
-docker build -t ton_username/sojalink:latest .
-docker push ton_username/sojalink:latest
+railway redeploy --service sojalink-deployment --yes
+railway redeploy --service worker-pending-events --yes
 ```
-
-Puis sur Railway dans **Deployments**, clique sur **Redeploy**.
-
-> ⚠️ `migration:fresh` supprime toutes les données et recrée les tables à chaque redéploiement. En production finale remplace `migration:fresh` par `migration:run`.
 
 ---
 
-## Problèmes courants et solutions
+## Problèmes rencontrés et solutions
 
-### Application failed to respond
+### Le workflow ne se déclenche pas après un merge
 
-**Cause** : le port exposé ne correspond pas au port sur lequel l'app écoute.
+**Cause** : `paths-ignore` sur le déclencheur `push` incluait
+`.github/workflows/**`. Si un commit ne modifie que ce fichier, GitHub considère
+que tous les fichiers changés sont ignorés, et saute le déclenchement.
 
-**Solution** : dans **Settings** → **Networking**, vérifie que le port est bien `8080`.
+**Solution** : `paths-ignore` retiré du bloc `push` du workflow.
 
-### Missing environment variable
+### `Unable to connect to the registry` sur Railway
 
-**Cause** : une variable d'environnement manque dans Railway.
+**Cause** : Railway n'authentifie pas correctement sur un package GHCR privé.
 
-**Solution** : vérifie toutes les variables dans l'onglet **Variables** et redéploie.
+**Solution** : package rendu public (voir Étape 1).
 
-### Table already exists
+### `denied: permission_denied: write_package` dans la CI
 
-**Cause** : la base de données n'est pas propre.
+**Cause** : un package poussé manuellement (hors workflow) n'est pas lié
+automatiquement au repo Actions.
 
-**Solution** : utilise `migration:fresh` au lieu de `migration:run` dans `docker-entrypoint.js`.
+**Solution** : lien ajouté manuellement via `Manage Actions access` (voir
+Étape 1).
 
-### Specified key was too long
+### Le worker reste bloqué, aucun event traité, malgré des logs "normaux"
 
-**Cause** : les colonnes `varchar(255)` dans les migrations dépassent la limite MySQL.
+**Cause** : après un `migration:fresh` exécuté manuellement en debug, la table
+`queue_schedules` (interne à `@adonisjs/queue`) s'est retrouvée vide. Elle
+n'est réinscrite qu'au démarrage du **service web**, jamais par le worker.
 
-**Solution** : réduire tous les varchar à `100` dans les fichiers de migration.
+**Solution** : après tout `migration:fresh`, toujours redéployer le service web
+en plus du worker.
 
-### getaddrinfo ENOTFOUND database
+### `InvalidJsonError` en boucle infinie, bloquant toute la file (FIFO)
 
-**Cause** : `DB_HOST` est défini sur `database` (nom du service Docker local) au lieu du host Railway.
+**Cause** : colonnes `payload_json`/`conditions_json`/`pipeline_json` déclarées
+en `table.json(...)` — comportement différent entre MariaDB (dev/CI) et MySQL
+(Railway prod), voir la note plus haut sur les migrations.
 
-**Solution** : utilise le host privé Railway (`mysql-xxx.railway.internal`) dans `DB_HOST`.
+**Solution** : toutes les colonnes `*_json` repassées en `table.text(...)`,
+suivi d'un `migration:fresh` ponctuel en production (données de test acceptées
+comme perdues) puis redéploiement du service web.
+
+### `Ctrl+C` ne tue pas vraiment le worker (Windows / Git Bash)
+
+**Cause** : sur MINGW64, `Ctrl+C` ne termine pas toujours le processus Node en
+arrière-plan — il continue de tourner, invisible.
+
+**Solution** : fermer complètement la fenêtre/l'onglet du terminal plutôt que
+de compter sur `Ctrl+C`. Vérifier avec :
+```bash
+powershell "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Select-Object ProcessId,CommandLine"
+```
+
+### `getaddrinfo ENOTFOUND` sur `*.railway.internal`
+
+**Cause** : les adresses `.railway.internal` (MySQL, Redis) ne sont résolvables
+que **depuis l'intérieur** du réseau Railway — jamais depuis une machine locale.
+
+**Solution** : soit se connecter via `railway ssh --service <nom>` (qui place
+dans le réseau interne), soit utiliser l'adresse publique du service (`Connect`
+→ `Public Network`) pour une connexion depuis la machine locale.
