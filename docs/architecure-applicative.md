@@ -427,6 +427,36 @@ export class PendingEventsWorker {
 }
 ```
 
+## Frontend (Inertia/React)
+
+Posé par la feature dashboard des automatisations (#27), première à toucher `inertia/`. Sert de référence pour toute page future.
+
+```txt
+inertia/
+  components/
+    ui/                    # primitives shadcn (button, card, dialog, table...)
+    RuleCard.tsx            # composants métier = compositions de primitives ui/
+    EventDetailDialog.tsx
+  lib/
+    rule.ts                 # helpers de présentation purs
+    utils.ts
+  hooks/
+    use-theme.ts             # état transverse (thème, responsive...)
+    use-mobile.ts
+  layouts/
+    default.tsx              # chrome partagé (sidebar, navigation)
+  pages/
+    dashboard/index.tsx       # une page = les props typées d'un transformer
+    rules/show.tsx
+```
+
+- `components/ui/` : primitives shadcn posées par la CLI (`components.json`). Ne pas y ajouter de logique métier ; les mises à jour passent par la CLI shadcn, pas par des retouches manuelles ad hoc.
+- `components/*.tsx` (hors `ui/`) : composants métier, compositions de primitives `ui/` (voir `docs/features/design-notes/dashboard_automatisations_ui.md` §7). Props typées à partir de la sortie d'un transformer HTTP (types `Data.*` générés, cf. section `app/http` ci-dessus), jamais d'un modèle Lucid.
+- `lib/` : fonctions de présentation pures et sans effet de bord (choix d'un variant de badge, formatage de date/durée...), l'équivalent frontend des fonctions métier pures de `app/domain` mais côté affichage : elles ne décident rien côté métier, elles traduisent un état déjà résolu par le transformer en quelque chose d'affichable.
+- `hooks/` : état transverse à plusieurs composants (thème, détection mobile...). Le `useState` local dans un composant reste réservé à l'état d'interface pur à ce composant (cf. §7 de la note de conception) ; dès qu'il est partagé, il devient un hook dédié ici.
+- `layouts/` : chrome de page partagé (sidebar, navigation). Une nouvelle page réutilise le layout existant plutôt que de dupliquer la structure.
+- `pages/` : point d'entrée Inertia d'une route. Reçoit uniquement des props déjà typées et transformées côté serveur — aucun `fetch`/`axios`, aucun calcul métier (cf. règles frontend §7 de la note de conception).
+
 ## Règles de dépendance
 
 Les dépendances doivent suivre ce sens :

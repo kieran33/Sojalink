@@ -12,7 +12,7 @@ function safeParseJson(raw: string): unknown {
 
 export default class RuleVersionTransformer extends BaseTransformer<SojalinkRuleVersion> {
   toObject() {
-    return this.pick(this.resource, ['id', 'versionNumber', 'isActive'])
+    return this.pick(this.resource, ['id', 'versionNumber', 'isActive', 'createdAt'])
   }
 
   forDetailedView() {

@@ -18,7 +18,9 @@ C'est aussi la première feature qui introduit la couche `app/http` (controllers
 
 Objectif : liste des règles + stats (`/dashboard`), détails d'une règle avec versions/conditions/pipeline/JSON brut/historique (`/rules/:id`), modale de détail d'un événement (tentatives, steps).
 
-Hors périmètre : activer/désactiver, déclenchement manuel, auth, pagination, charte graphique Sojadis (mockup en gris/rouge neutre).
+Hors périmètre : activer/désactiver, déclenchement manuel, auth, charte graphique Sojadis (mockup en gris/rouge neutre).
+
+> Écart par rapport au plan initial : la pagination de la liste des règles (12 par page) a finalement été implémentée dans cette V1 — le volume de règles seedées en démo rendait la liste non paginée peu lisible. Voir `ListRulesWithStats` (`app/http/actions/dashboard/`) et `PaginationBar`.
 
 ---
 
@@ -122,4 +124,4 @@ shadcn/ui :
 
 ## 10. Questions ouvertes
 
-1. Charte graphique Sojadis : neutre vs vert/bleu Sojadis ?
+1. ~~Charte graphique Sojadis : neutre vs vert/bleu Sojadis ?~~ Tranché : thème neutre (gris), avec bascule clair/sombre (`ThemeToggle`, `use-theme.ts`) plutôt qu'une charte Sojadis dédiée.

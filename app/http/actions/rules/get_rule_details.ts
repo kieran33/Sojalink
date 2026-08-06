@@ -7,11 +7,14 @@ export default class GetRuleDetails {
       .preload('eventType')
       .preload('versions', (versionsQuery) => {
         versionsQuery.orderBy('versionNumber', 'desc').preload('appliedEvents', (eventsQuery) => {
-          eventsQuery.orderBy('createdAt', 'desc').preload('attempts', (attemptsQuery) => {
-            attemptsQuery
-              .orderBy('attemptNumber', 'asc')
-              .preload('stepLogs', (stepLogsQuery) => stepLogsQuery.orderBy('stepIndex', 'asc'))
-          })
+          eventsQuery
+            .orderBy('createdAt', 'desc')
+            .preload('eventType')
+            .preload('attempts', (attemptsQuery) => {
+              attemptsQuery
+                .orderBy('attemptNumber', 'asc')
+                .preload('stepLogs', (stepLogsQuery) => stepLogsQuery.orderBy('stepIndex', 'asc'))
+            })
         })
       })
       .firstOrFail()

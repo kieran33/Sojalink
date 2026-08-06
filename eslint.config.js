@@ -1,4 +1,4 @@
-import { configApp } from '@adonisjs/eslint-config'
+import { configApp, RULES_LIST } from '@adonisjs/eslint-config'
 
 const lucidModelImports = [
   '#models/sojalink_event',
@@ -16,6 +16,24 @@ const lucidModelImports = [
 
 export default [
   ...configApp(),
+
+  {
+    ignores: ['inertia/components/ui/**'],
+    name: 'Custom config for Inertia projects',
+    files: ['inertia/**/*.ts', 'inertia/**/*.tsx'],
+    rules: {
+      ...RULES_LIST,
+      '@unicorn/filename-case': [
+        'error',
+        {
+          cases: {
+            pascalCase: true,
+            camelCase: true,
+          },
+        },
+      ],
+    },
+  },
 
   {
     // Generated file (node ace migration:run), not formatted by hand.
