@@ -17,8 +17,8 @@ export default class extends BaseSchema {
 
       table.integer('version_number').notNullable()
       table.boolean('is_active').notNullable().defaultTo(false).index()
-      table.text('conditions_json').notNullable()
-      table.text('pipeline_json').notNullable()
+      table.text('conditions_json', 'longtext').notNullable()
+      table.text('pipeline_json', 'longtext').notNullable()
 
       table.datetime('created_at').notNullable().defaultTo(this.now())
       table.datetime('updated_at').nullable()

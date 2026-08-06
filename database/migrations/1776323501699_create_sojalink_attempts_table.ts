@@ -18,7 +18,7 @@ export default class extends BaseSchema {
       table.integer('attempt_number').notNullable()
       table.string('status', 100).notNullable().index()
       table.string('error_code', 100).nullable()
-      table.text('error_message').nullable()
+      table.text('error_message', 'longtext').nullable()
       table.datetime('started_at').notNullable().defaultTo(this.now())
       table.datetime('finished_at').nullable()
 

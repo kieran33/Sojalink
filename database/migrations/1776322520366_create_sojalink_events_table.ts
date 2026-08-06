@@ -24,7 +24,7 @@ export default class extends BaseSchema {
       })
 
       table.string('status', 100).notNullable().index()
-      table.text('payload_json').notNullable()
+      table.text('payload_json', 'longtext').notNullable()
 
       table
         .integer('applied_rule_version_id')
@@ -34,9 +34,9 @@ export default class extends BaseSchema {
         .nullable()
         .index()
 
-      table.text('resolution_snapshot_json').nullable()
+      table.text('resolution_snapshot_json', 'longtext').nullable()
       table.string('resolution_error_code', 100).nullable().index()
-      table.text('resolution_error_message').nullable()
+      table.text('resolution_error_message', 'longtext').nullable()
 
       table.datetime('created_at').notNullable().defaultTo(this.now()).index()
       table.datetime('updated_at').nullable()

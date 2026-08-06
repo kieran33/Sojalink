@@ -47,7 +47,7 @@ export default class Scenario1NominalSeeder extends BaseSeeder {
       eventTypeId: eventType.id,
       sourceApp: 'SojadisPro',
       sourceEntityType: 'scenario',
-      sourceEntityId: 1,
+      sourceEntityId: Math.floor(Date.now() / 1000),
       status: 'pending',
       payloadJson: JSON.stringify({ name: 'commande nominale' }),
     })

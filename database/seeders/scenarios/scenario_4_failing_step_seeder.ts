@@ -48,7 +48,7 @@ export default class Scenario4FailingStepSeeder extends BaseSeeder {
       eventTypeId: eventType.id,
       sourceApp: 'SojadisPro',
       sourceEntityType: 'scenario',
-      sourceEntityId: 4,
+      sourceEntityId: Math.floor(Date.now() / 1000),
       status: 'pending',
       payloadJson: JSON.stringify({ id: 42 }),
     })

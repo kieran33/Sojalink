@@ -55,7 +55,7 @@ export default class Scenario3MultiStepSeeder extends BaseSeeder {
       eventTypeId: eventType.id,
       sourceApp: 'SojadisPro',
       sourceEntityType: 'scenario',
-      sourceEntityId: 3,
+      sourceEntityId: Math.floor(Date.now() / 1000),
       status: 'pending',
       payloadJson: JSON.stringify({ name: 'commande multi-steps' }),
     })
