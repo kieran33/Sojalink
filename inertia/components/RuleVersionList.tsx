@@ -1,6 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { flattenConditions, formatDate, isPipeline, type RuleVersion } from '@/lib/rule'
+import {
+  flattenConditions,
+  formatDate,
+  isPipeline,
+  type Pipeline,
+  type RuleVersion,
+} from '@/lib/rule'
 import { cn } from '@/lib/utils'
 
 type RuleVersionListProps = {
@@ -39,7 +45,10 @@ export function RuleVersionList({ versions, selectedVersionId, onSelect }: RuleV
             <span className="text-xs text-muted-foreground">{formatDate(version.createdAt)}</span>
             <span className="text-xs text-muted-foreground">
               {flattenConditions(version.conditions)?.length ?? 0} conditions ·{' '}
-              {isPipeline(version.pipeline) ? version.pipeline.steps.length : 0} étapes
+              {isPipeline(version.pipeline as unknown)
+                ? (version.pipeline as unknown as Pipeline).steps.length
+                : 0}{' '}
+              étapes
             </span>
           </button>
         ))}
