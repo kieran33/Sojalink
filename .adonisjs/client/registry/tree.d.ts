@@ -2,5 +2,8 @@
 import type { routes } from './index.ts'
 
 export interface ApiDefinition {
-  home: typeof routes['home']
+  dashboard: typeof routes['dashboard']
+  rules: {
+    show: typeof routes['rules.show']
+  }
 }

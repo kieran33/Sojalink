@@ -1,24 +1,14 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import app from '@adonisjs/core/services/app'
-import SojalinkEventTypeSeeder from '#database/seeders/sojalink_event_type_seeder'
-import SojalinkRuleSeeder from '#database/seeders/sojalink_rule_seeder'
-import SojalinkRuleVersionSeeder from '#database/seeders/sojalink_rule_version_seeder'
-import SojalinkEventSeeder from '#database/seeders/sojalink_event_seeder'
+import testUtils from '@adonisjs/core/services/test_utils'
 import { EventProcessor } from '#application/events/event_processor'
+import { seedEventGraphWithPendingEvent } from '#tests/helpers/event_graph_factory'
 
-async function seedProcessableGraph() {
-  const client = db.connection()
-  await new SojalinkEventTypeSeeder(client).run()
-  await new SojalinkRuleSeeder(client).run()
-  await new SojalinkRuleVersionSeeder(client).run()
-  await new SojalinkEventSeeder(client).run()
-
-  const event = await db.from('sojalink_events').where('status', 'pending').first()
-
-  return { eventId: event.id }
-}
-
+/**
+ * End-to-end coverage of one polling tick:
+ * reservation -> rule resolution -> pipeline execution -> final status.
+ */
 async function processNextEvent() {
   const processor = await app.container.make(EventProcessor)
 
@@ -26,22 +16,14 @@ async function processNextEvent() {
 }
 
 test.group('EventProcessor', (group) => {
-  group.each.setup(async () => {
-    await db.from('sojalink_step_logs').delete()
-    await db.from('sojalink_attempts').delete()
-    await db.from('sojalink_entity_correlations').delete()
-    await db.from('sojalink_events').delete()
-    await db.from('sojalink_rule_versions').delete()
-    await db.from('sojalink_rules').delete()
-    await db.from('sojalink_event_types').delete()
-  })
+  group.each.setup(() => testUtils.db().wrapInGlobalTransaction())
 
   test('does nothing when there is no pending event', async ({ assert }) => {
     await assert.doesNotReject(() => processNextEvent())
   })
 
   test('processes a pending event from reservation to success', async ({ assert }) => {
-    const { eventId } = await seedProcessableGraph()
+    const { eventId } = await seedEventGraphWithPendingEvent()
 
     await processNextEvent()
 
@@ -73,7 +55,7 @@ test.group('EventProcessor', (group) => {
   test('marks the event failed when no rule matches, without creating an attempt', async ({
     assert,
   }) => {
-    const { eventId } = await seedProcessableGraph()
+    const { eventId } = await seedEventGraphWithPendingEvent()
 
     await db.from('sojalink_events').where('id', eventId).update({ source_app: 'UnknownApp' })
 
@@ -93,7 +75,7 @@ test.group('EventProcessor', (group) => {
   test('marks the event failed when a step fails, keeping the failure trace', async ({
     assert,
   }) => {
-    const { eventId } = await seedProcessableGraph()
+    const { eventId } = await seedEventGraphWithPendingEvent()
 
     const ruleVersion = await db.from('sojalink_rule_versions').where('is_active', 1).first()
 

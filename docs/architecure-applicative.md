@@ -338,34 +338,45 @@ Dans cet exemple, `EventProcessor.process()` ne peut pas recevoir n’importe qu
 
 ### `app/http`
 
-Contient les adaptateurs HTTP.
+Contient les adaptateurs HTTP : controllers, validators, transformers.
 
-Cette couche est responsable :
+Seule exception à la règle « pas de Lucid hors persistance » : `app/http` peut recevoir et utiliser des modèles Lucid, à la seule condition qu'ils ne sortent jamais tels quels vers Inertia (toujours via un transformer).
 
-- des controllers ;
-- des validators ;
-- des transformers ;
-- de l’adaptation entre HTTP et l’application.
+Pourquoi cette exception : les controllers HTTP servent des pages d'affichage (lister, consulter), sans état à protéger le temps d'une requête. Le risque qui justifie les objets métier ailleurs (un event traité deux fois, une étape exécutée dans le désordre) est un risque d'exécution asynchrone et concurrente, propre au moteur (`app/domain`, `app/application`). Il n'existe pas sur une requête HTTP synchrone de lecture. Imposer un mapping vers un objet métier intermédiaire, alors que le transformer va de toute façon reformer les données pour la page, ajoute une étape sans bénéfice de sécurité de typage supplémentaire.
 
-Les controllers ne doivent pas importer directement les modèles Lucid. Ils appellent des cas d’usage applicatifs.
+Pour une simple lecture HTTP (lister, consulter le détail), pas besoin de passer par `app/application`/`app/persistence` : le controller appelle directement une **action**, une classe à méthode statique `handle()` co-localisée dans `app/http/actions/`, qui fait la requête Lucid (avec les préchargements nécessaires) et la renvoie telle quelle. C'est le même principe qu'un cas d'usage (une classe, un point d'entrée, une responsabilité), mais sans repository ni objet métier intermédiaire — puisque `app/http` est déjà la zone autorisée à manipuler du Lucid, et qu'une lecture HTTP synchrone n'a pas le risque de concurrence que ces couches protègent (voir ci-dessus). Réservez `app/application`/`app/persistence` à ce qui est aussi appelé par `app/workers`, ou qui a un vrai besoin de réutilisation en dehors de `app/http`.
 
-Les transformers transforment des objets métier en réponses HTTP.
+Le transformer prend ce que renvoie l'action et produit les données envoyées au frontend. Utiliser `@adonisjs/core/transformers` (`BaseTransformer`, `.pick()` pour lister explicitement les champs exposés, `.whenLoaded()` pour composer une relation avec un autre transformer) : `.pick()` garantit qu'aucune colonne interne ne fuite par oubli. Chaque relation imbriquée se compose avec le transformer de l'entité correspondante plutôt que d'être mappée à la main ; la résolution des relations imbriquées est limitée à 1 niveau par défaut, penser à `.depth(n)` au-delà.
 
 Exemple :
 
 ```ts
-import { inject } from '@adonisjs/core'
-import { ListEvents } from '#application/events/list_events'
-import { EventTransformer } from '#http/transformers/event_transformer'
+// app/http/actions/rules/get_rule_details.ts
+import SojalinkRule from '#models/sojalink_rule'
 
-@inject()
-export default class EventsController {
-  constructor(private listEvents: ListEvents) {}
+export default class GetRuleDetails {
+  static async handle(ruleId: number) {
+    return SojalinkRule.query()
+      .where('id', ruleId)
+      .preload('versions')
+      .firstOrFail()
+  }
+}
+```
 
-  async index() {
-    const events = await this.listEvents.handle()
+```ts
+// app/http/controllers/rules_controller.ts
+import type { HttpContext } from '@adonisjs/core/http'
+import GetRuleDetails from '#http/actions/rules/get_rule_details'
+import RuleTransformer from '#http/transformers/rule_transformer'
 
-    return events.map((event) => EventTransformer.toJson(event))
+export default class RulesController {
+  async show({ params, inertia }: HttpContext) {
+    const rule = await GetRuleDetails.handle(Number(params.id))
+
+    return inertia.render('rules/show', {
+      rule: RuleTransformer.transform(rule).useVariant('forShowPage'),
+    })
   }
 }
 ```
@@ -373,15 +384,22 @@ export default class EventsController {
 Exemple de transformer :
 
 ```ts
-import type { DomainEvent } from '#domain/events/event'
+import { BaseTransformer } from '@adonisjs/core/transformers'
+import type SojalinkRule from '#models/sojalink_rule'
 
-export class EventTransformer {
-  static toJson(event: DomainEvent) {
+export default class RuleTransformer extends BaseTransformer<SojalinkRule> {
+  toObject() {
+    return this.pick(this.resource, ['id', 'code', 'label', 'priority', 'isActive'])
+  }
+
+  forShowPage() {
     return {
-      id: event.id,
-      status: event.status,
-      type: event.type,
-      occurredAt: event.occurredAt.toISO(),
+      ...this.toObject(),
+      versions: this.resource.versions.map((version) => ({
+        id: version.id,
+        versionNumber: version.versionNumber,
+        isActive: version.isActive,
+      })),
     }
   }
 }
@@ -409,6 +427,36 @@ export class PendingEventsWorker {
 }
 ```
 
+## Frontend (Inertia/React)
+
+Posé par la feature dashboard des automatisations (#27), première à toucher `inertia/`. Sert de référence pour toute page future.
+
+```txt
+inertia/
+  components/
+    ui/                    # primitives shadcn (button, card, dialog, table...)
+    RuleCard.tsx            # composants métier = compositions de primitives ui/
+    EventDetailDialog.tsx
+  lib/
+    rule.ts                 # helpers de présentation purs
+    utils.ts
+  hooks/
+    use-theme.ts             # état transverse (thème, responsive...)
+    use-mobile.ts
+  layouts/
+    default.tsx              # chrome partagé (sidebar, navigation)
+  pages/
+    dashboard/index.tsx       # une page = les props typées d'un transformer
+    rules/show.tsx
+```
+
+- `components/ui/` : primitives shadcn posées par la CLI (`components.json`). Ne pas y ajouter de logique métier ; les mises à jour passent par la CLI shadcn, pas par des retouches manuelles ad hoc.
+- `components/*.tsx` (hors `ui/`) : composants métier, compositions de primitives `ui/` (voir `docs/features/design-notes/dashboard_automatisations_ui.md` §7). Props typées à partir de la sortie d'un transformer HTTP (types `Data.*` générés, cf. section `app/http` ci-dessus), jamais d'un modèle Lucid.
+- `lib/` : fonctions de présentation pures et sans effet de bord (choix d'un variant de badge, formatage de date/durée...), l'équivalent frontend des fonctions métier pures de `app/domain` mais côté affichage : elles ne décident rien côté métier, elles traduisent un état déjà résolu par le transformer en quelque chose d'affichable.
+- `hooks/` : état transverse à plusieurs composants (thème, détection mobile...). Le `useState` local dans un composant reste réservé à l'état d'interface pur à ce composant (cf. §7 de la note de conception) ; dès qu'il est partagé, il devient un hook dédié ici.
+- `layouts/` : chrome de page partagé (sidebar, navigation). Une nouvelle page réutilise le layout existant plutôt que de dupliquer la structure.
+- `pages/` : point d'entrée Inertia d'une route. Reçoit uniquement des props déjà typées et transformées côté serveur — aucun `fetch`/`axios`, aucun calcul métier (cf. règles frontend §7 de la note de conception).
+
 ## Règles de dépendance
 
 Les dépendances doivent suivre ce sens :
@@ -426,16 +474,18 @@ Règles principales :
 
 ```txt
 app/models      = modèles Lucid uniquement
-app/persistence = seule couche applicative autorisée à importer app/models
+app/persistence = seule couche autorisée à construire des objets métier depuis Lucid
 app/domain      = métier pur, pas de Lucid, pas de HTTP
 app/application = orchestration, pas de modèles Lucid
-app/http        = adaptation HTTP, pas de modèles Lucid
+app/http        = adaptation HTTP, peut utiliser les modèles Lucid (via les transformers, jamais exposés tels quels)
 app/workers     = adaptation worker, pas de modèles Lucid
 ```
 
+Seul `app/http` déroge à la règle « pas de Lucid hors persistance », pour les raisons expliquées plus haut. `app/domain`, `app/application` et `app/workers` restent bloqués : c'est là que vivent les invariants d'état du moteur (resolver/executor), qui ont besoin d'objets métier typés pour rester sûrs (voir `docs/rule_resolver.md`, `docs/runtime_executor.md`).
+
 ## Règle ESLint
 
-Les modèles Lucid ne doivent être importés que par `app/persistence` ou `app/models`.
+Les modèles Lucid ne doivent être importés que par `app/models`, `app/persistence`, et `app/http`.
 
 Exemple avec `no-restricted-imports` et `paths` :
 
@@ -444,14 +494,16 @@ import { configApp } from '@adonisjs/eslint-config'
 
 const lucidModelImports = [
   '#models/sojalink_event',
-  '#models/event_type',
-  '#models/rule',
-  '#models/rule_version',
-  '#models/entity_correlation',
+  '#models/sojalink_event_type',
+  '#models/sojalink_rule',
+  '#models/sojalink_rule_version',
+  '#models/sojalink_attempt',
+  '#models/sojalink_step_log',
+  '#models/sojalink_entity_correlation',
 ].map((name) => ({
   name,
   message:
-    'Les modèles Lucid sont réservés à app/persistence. Utilise un objet métier exposé par app/domain.',
+    'Les modèles Lucid sont réservés à app/persistence et app/http. Utilise un objet métier exposé par app/domain.',
 }))
 
 export default [
@@ -459,7 +511,7 @@ export default [
 
   {
     files: ['app/**/*.ts'],
-    ignores: ['app/models/**/*.ts', 'app/persistence/**/*.ts'],
+    ignores: ['app/models/**/*.ts', 'app/persistence/**/*.ts', 'app/http/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -519,6 +571,12 @@ Classe responsable de la lecture et écriture en base de données. Elle utilise 
 Classe applicative qui orchestre un scénario métier.
 
 Exemple : `ProcessNextPendingEvent`.
+
+### Action (`app/http`)
+
+Équivalent d'un use case, mais réservé aux lectures HTTP : classe à méthode statique `handle()`, co-localisée dans `app/http/actions`, qui requête Lucid directement sans passer par repository/objet métier.
+
+Exemple : `GetRuleDetails`.
 
 ### Transformer HTTP
 

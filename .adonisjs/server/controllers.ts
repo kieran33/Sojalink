@@ -3,4 +3,7 @@
  * DO NOT EDIT manually
  */
 
-export const controllers = {}
+export const controllers = {
+  Dashboard: () => import('#controllers/dashboard_controller'),
+  Rules: () => import('#controllers/rules_controller'),
+}

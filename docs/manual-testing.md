@@ -204,3 +204,28 @@ Si une ligne de cette requête ne suffit pas à expliquer un échec, c'est un bu
 ## 11. Reprise après échec
 
 Rappel V1 : on ne relance jamais un event `failed`. Pour rejouer, l'appli source insère un **nouvel** event (avec un nouvel identifiant source). Vérifie qu'un event `failed` reste `failed` et que le nouveau passe.
+
+## 12. Tester le dashboard (UI)
+
+Contrairement aux scénarios précédents (un event à la fois, traité en direct par le worker), le dashboard se teste avec un jeu de données déjà dans son état final — pas besoin du worker.
+
+```bash
+node ace db:seed
+node ace serve --hmr
+```
+
+`node ace db:seed` inclut `database/seeders/fixtures/frontend_demo_seeder.ts`, qui crée une trentaine d'automatisations réparties sur autant de domaines métier, chacune avec des events déjà `processed`/`failed`/`pending`, attempts et step logs compris. Pour le rejouer isolément (sans retoucher le reste des données) :
+
+```bash
+node ace db:seed --files "database/seeders/fixtures/frontend_demo_seeder.ts"
+```
+
+> Restreint à `development` : jamais exécuté en test ni en prod.
+
+**Parcours à vérifier :**
+
+1. `/dashboard` — les 4 indicateurs (total, actives, traités 24h, échecs 24h) correspondent aux données seedées ; bascule vue cartes ⇄ vue tableau ; pagination (12 règles par page).
+2. Clic sur une règle → navigation vers `/rules/:id` par une vraie route Inertia (URL qui change, back/forward navigateur fonctionnels — pas un state client).
+3. `/rules/:id` — liste des versions, conditions, pipeline, JSON brut, historique des events. Sélectionner une autre version doit mettre à jour conditions/pipeline/JSON affichés.
+4. Dans l'historique, cliquer un event → la modale affiche la chronologie, le payload, et le détail des tentatives (une par exécution) avec leurs steps ; pour un event `failed`, vérifier que le message d'erreur et le step en échec sont visibles.
+5. Bascule thème clair/sombre depuis la sidebar — persiste après rechargement de la page.

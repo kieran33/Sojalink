@@ -6,8 +6,38 @@
 /// <reference path="./manifest.d.ts" />
 import type { InferData, InferVariants } from '@adonisjs/core/types/transformers'
 import type { InferSharedProps } from '@adonisjs/inertia/types'
+import type AttemptTransformer from '#transformers/attempt_transformer'
+import type EventTransformer from '#transformers/event_transformer'
+import type EventTypeTransformer from '#transformers/event_type_transformer'
+import type RuleTransformer from '#transformers/rule_transformer'
+import type RuleVersionTransformer from '#transformers/rule_version_transformer'
+import type StepLogTransformer from '#transformers/step_log_transformer'
 import type InertiaMiddleware from '#middleware/inertia_middleware'
 
 export namespace Data {
+  export type Attempt = InferData<AttemptTransformer>
+  export namespace Attempt {
+    export type Variants = InferVariants<AttemptTransformer>
+  }
+  export type Event = InferData<EventTransformer>
+  export namespace Event {
+    export type Variants = InferVariants<EventTransformer>
+  }
+  export type EventType = InferData<EventTypeTransformer>
+  export namespace EventType {
+    export type Variants = InferVariants<EventTypeTransformer>
+  }
+  export type Rule = InferData<RuleTransformer>
+  export namespace Rule {
+    export type Variants = InferVariants<RuleTransformer>
+  }
+  export type RuleVersion = InferData<RuleVersionTransformer>
+  export namespace RuleVersion {
+    export type Variants = InferVariants<RuleVersionTransformer>
+  }
+  export type StepLog = InferData<StepLogTransformer>
+  export namespace StepLog {
+    export type Variants = InferVariants<StepLogTransformer>
+  }
   export type SharedProps = InferSharedProps<InertiaMiddleware>
 }
