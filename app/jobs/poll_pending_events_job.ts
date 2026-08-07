@@ -2,7 +2,7 @@ import { inject } from '@adonisjs/core'
 import logger from '@adonisjs/core/services/logger'
 import { Job } from '@adonisjs/queue'
 import type { JobOptions } from '@adonisjs/queue/types'
-import { PendingEventsWorker } from '#application/events/pending_events_worker'
+import { PendingEventsWorker } from '#workers/pending_events_worker'
 
 @inject()
 export default class PollPendingEventsJob extends Job {

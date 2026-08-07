@@ -1,5 +1,5 @@
 import { test } from '@japa/runner'
-import { PendingEventsWorker } from '#application/events/pending_events_worker'
+import { PendingEventsWorker } from '#workers/pending_events_worker'
 import PollPendingEventsJob from '#jobs/poll_pending_events_job'
 import { shouldSchedulePolling } from '#start/scheduler'
 
