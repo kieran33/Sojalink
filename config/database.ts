@@ -25,11 +25,7 @@ const dbConfig = defineConfig({
         // "main" runs on a plain `node ace db:seed`; "scenarios" holds the
         // manual-testing scenario seeders (development only, see
         // docs/manual-testing.md), cherry-pickable with `db:seed --files`.
-        paths: [
-          './database/seeders/main',
-          './database/seeders/scenarios',
-          './database/seeders/fixtures',
-        ],
+        paths: ['./database/seeders/main', './database/seeders/scenarios'],
       },
       /**
        * Emit SQL queries to the logger in development.

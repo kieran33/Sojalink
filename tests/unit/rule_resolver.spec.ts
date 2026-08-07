@@ -2,26 +2,46 @@ import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { DateTime } from 'luxon'
+import SojalinkEventTypeSeeder from '#database/seeders/sojalink_event_type_seeder'
+import SojalinkRuleSeeder from '#database/seeders/sojalink_rule_seeder'
+import SojalinkRuleVersionSeeder from '#database/seeders/sojalink_rule_version_seeder'
 import SojalinkEvent from '#models/sojalink_event'
 import { RuleResolver } from '#application/events/rule_resolver'
+import { evaluateRuleConditions } from '#application/events/evaluate_rule_conditions'
 import { RuleRepository } from '#persistence/events/rule_repository'
 import { EventRepository } from '#persistence/events/event_repository'
 import type { ProcessingEvent } from '#domain/events/event'
-import { seedEventGraph, type EventGraph } from '#tests/helpers/event_graph_factory'
 
-type EventDependencies = EventGraph
+type EventDependencies = {
+  eventTypeId: number
+  ruleId: number
+  ruleVersionId: number
+}
 
-/**
- * seedEventGraph() overridden with a condition this file's tests can
- * reliably satisfy or violate (`payload.source_app`) rather than the
- * seeded default.
- */
 async function seedEvent(): Promise<EventDependencies> {
-  const graph = await seedEventGraph()
+  const client = db.connection()
+
+  await new SojalinkEventTypeSeeder(client).run()
+  await new SojalinkRuleSeeder(client).run()
+  await new SojalinkRuleVersionSeeder(client).run()
+
+  const eventType = await db.from('sojalink_event_types').orderBy('id', 'desc').first()
+  const rule = await db.from('sojalink_rules').orderBy('id', 'desc').first()
+  const ruleVersion = rule
+    ? await db
+        .from('sojalink_rule_versions')
+        .where('rule_id', rule.id)
+        .orderBy('id', 'desc')
+        .first()
+    : null
+
+  if (!eventType || !rule || !ruleVersion) {
+    throw new Error('Expected event type, rule and rule version to exist')
+  }
 
   await db
     .from('sojalink_rule_versions')
-    .where('id', graph.ruleVersionId)
+    .where('id', ruleVersion.id)
     .update({
       conditions_json: JSON.stringify({
         op: 'eq',
@@ -30,7 +50,11 @@ async function seedEvent(): Promise<EventDependencies> {
       }),
     })
 
-  return graph
+  return {
+    eventTypeId: eventType.id,
+    ruleId: rule.id,
+    ruleVersionId: ruleVersion.id,
+  }
 }
 
 async function createSojalinkEvent(
@@ -238,5 +262,88 @@ test.group('rule resolver', (group) => {
     await event.refresh()
 
     assert.equal(event.resolutionErrorCode, 'MultipleMatchingRulesError')
+  })
+
+  test('condition eq matches an equal value', ({ assert }) => {
+    const result = evaluateRuleConditions(
+      {
+        op: 'eq',
+        field: 'sourceApp',
+        value: 'sojadispro',
+      },
+      { sourceApp: 'sojadispro' }
+    )
+
+    assert.isTrue(result)
+  })
+
+  test('condition eq rejects a different value', ({ assert }) => {
+    const result = evaluateRuleConditions(
+      {
+        op: 'eq',
+        field: 'sourceApp',
+        value: 'sojadispro',
+      },
+      { sourceApp: 'random_app' }
+    )
+
+    assert.isFalse(result)
+  })
+
+  test('condition eq reads nested payload paths', ({ assert }) => {
+    const result = evaluateRuleConditions(
+      {
+        op: 'eq',
+        field: 'payload.source_app',
+        value: 'sojadispro',
+      },
+      { payload: { source_app: 'sojadispro' } }
+    )
+
+    assert.isTrue(result)
+  })
+
+  test('condition on an unknown field evaluates to false', ({ assert }) => {
+    const result = evaluateRuleConditions(
+      {
+        op: 'eq',
+        field: 'unexpected_field',
+        value: 'sojadispro',
+      },
+      { sourceApp: 'sojadispro' }
+    )
+
+    assert.isFalse(result)
+  })
+
+  test('malformed conditions evaluate to false', ({ assert }) => {
+    const result = evaluateRuleConditions('invalid json here' as never, {
+      sourceApp: 'sojadispro',
+    })
+
+    assert.isFalse(result)
+  })
+
+  test('condition all requires every nested condition to match', ({ assert }) => {
+    const conditions = {
+      all: [
+        { op: 'eq', field: 'sourceApp', value: 'sojadispro' },
+        { op: 'eq', field: 'payload.status', value: 'paid' },
+      ],
+    }
+
+    assert.isTrue(
+      evaluateRuleConditions(conditions, {
+        sourceApp: 'sojadispro',
+        payload: { status: 'paid' },
+      })
+    )
+
+    assert.isFalse(
+      evaluateRuleConditions(conditions, {
+        sourceApp: 'sojadispro',
+        payload: { status: 'draft' },
+      })
+    )
   })
 })

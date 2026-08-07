@@ -4,16 +4,13 @@ type ParamValue = string | number | bigint | boolean
 
 export type ScannedRoutes = {
   ALL: {
-    'dashboard': { paramsTuple?: []; params?: {} }
-    'rules.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'home': { paramsTuple?: []; params?: {} }
   }
   GET: {
-    'dashboard': { paramsTuple?: []; params?: {} }
-    'rules.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'home': { paramsTuple?: []; params?: {} }
   }
   HEAD: {
-    'dashboard': { paramsTuple?: []; params?: {} }
-    'rules.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'home': { paramsTuple?: []; params?: {} }
   }
 }
 declare module '@adonisjs/core/types/http' {

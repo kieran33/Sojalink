@@ -1,25 +1,203 @@
 import { test } from '@japa/runner'
-import { PendingEventsWorker } from '#application/events/pending_events_worker'
+import db from '@adonisjs/lucid/services/db'
+import { DateTime } from 'luxon'
+import SojalinkEventTypeSeeder from '#database/seeders/sojalink_event_type_seeder'
+import SojalinkRuleSeeder from '#database/seeders/sojalink_rule_seeder'
+import SojalinkRuleVersionSeeder from '#database/seeders/sojalink_rule_version_seeder'
+import SojalinkEvent from '#models/sojalink_event'
+import { EventRepository } from '#persistence/events/event_repository'
 import PollPendingEventsJob from '#jobs/poll_pending_events_job'
 import { shouldSchedulePolling } from '#start/scheduler'
 
-test.group('PendingEventsWorker', () => {
-  test('delegates to the event processor', async ({ assert }) => {
-    let calls = 0
+type EventDependencies = {
+  eventTypeId: number
+  ruleVersionId: number
+}
 
-    const eventProcessor = {
-      process: async () => {
-        calls += 1
-      },
-    }
+async function seedEventDependencies(): Promise<EventDependencies> {
+  const client = db.connection()
 
-    const workerHealthRepository = {
-      recordRun: async () => {},
-    }
+  await new SojalinkEventTypeSeeder(client).run()
+  await new SojalinkRuleSeeder(client).run()
+  await new SojalinkRuleVersionSeeder(client).run()
 
-    await new PendingEventsWorker(eventProcessor as never, workerHealthRepository as never).handle()
+  const eventType = await db
+    .from('sojalink_event_types')
+    .where('code', 'sojadispro.order.created')
+    .first()
 
-    assert.equal(calls, 1)
+  const rule = await db
+    .from('sojalink_rules')
+    .where('code', 'sojadispro-order-to-toki-task')
+    .first()
+
+  const ruleVersion = rule
+    ? await db.from('sojalink_rule_versions').where('rule_id', rule.id).first()
+    : null
+
+  if (!eventType || !rule || !ruleVersion) {
+    throw new Error('Expected event type, rule and rule version to exist')
+  }
+
+  return {
+    eventTypeId: eventType.id,
+    ruleVersionId: ruleVersion.id,
+  }
+}
+
+async function createSojalinkEvent(
+  dependencies: EventDependencies,
+  attributes: Partial<{
+    processedAt: DateTime | null
+    processingStartedAt: DateTime | null
+    createdAt: DateTime
+    sourceEntityId: number
+    status: string
+  }> = {}
+) {
+  const sourceEntityId = attributes.sourceEntityId ?? Math.floor(Math.random() * 100000)
+
+  const event = new SojalinkEvent()
+
+  event.eventTypeId = dependencies.eventTypeId
+  event.sourceApp = 'sojadispro'
+  event.sourceEntityType = 'worksheet'
+  event.sourceEntityId = sourceEntityId
+  event.status = attributes.status ?? 'pending'
+  event.payloadJson = JSON.stringify({ id: sourceEntityId })
+  event.appliedRuleVersionId = dependencies.ruleVersionId
+  event.resolutionSnapshotJson = '{}'
+  event.processingStartedAt = attributes.processingStartedAt ?? null
+  event.processedAt = attributes.processedAt ?? null
+
+  if (attributes.createdAt) {
+    event.createdAt = attributes.createdAt
+  }
+
+  await event.save()
+
+  return event
+}
+
+test.group('EventRepository.reserveNextPendingEvent', (group) => {
+  group.each.setup(async () => {
+    await db.from('sojalink_step_logs').delete()
+    await db.from('sojalink_attempts').delete()
+    await db.from('sojalink_entity_correlations').delete()
+    await db.from('sojalink_events').delete()
+    await db.from('sojalink_rule_versions').delete()
+    await db.from('sojalink_rules').delete()
+    await db.from('sojalink_event_types').delete()
+  })
+
+  test('returns null when there is no pending event', async ({ assert }) => {
+    const reservedEvent = await new EventRepository().reserveNextPendingEvent()
+
+    assert.isNull(reservedEvent)
+  })
+
+  test('reserves one pending event and returns a ProcessingEvent', async ({ assert }) => {
+    const dependencies = await seedEventDependencies()
+
+    const event = await createSojalinkEvent(dependencies, {
+      sourceEntityId: 1,
+    })
+
+    const reservedEvent = await new EventRepository().reserveNextPendingEvent()
+
+    await event.refresh()
+
+    assert.equal(event.status, 'processing')
+    assert.isNotNull(event.processingStartedAt)
+
+    assert.containSubset(reservedEvent, {
+      id: event.id,
+      status: 'processing',
+      eventTypeId: dependencies.eventTypeId,
+      sourceApp: 'sojadispro',
+      sourceEntityType: 'worksheet',
+      sourceEntityId: 1,
+      payload: { id: 1 },
+    })
+
+    assert.equal(reservedEvent?.createdAt.toISO(), event.createdAt.toISO())
+    assert.isNotNull(reservedEvent?.processingStartedAt)
+  })
+
+  test('ignores events that are already processing, processed or failed', async ({ assert }) => {
+    const dependencies = await seedEventDependencies()
+    const processingStartedAt = DateTime.utc(2026, 1, 1)
+
+    await createSojalinkEvent(dependencies, {
+      sourceEntityId: 4,
+      processingStartedAt,
+      status: 'processing',
+    })
+
+    await createSojalinkEvent(dependencies, {
+      sourceEntityId: 5,
+      processedAt: DateTime.utc(2026, 1, 2),
+      processingStartedAt,
+      status: 'processed',
+    })
+
+    await createSojalinkEvent(dependencies, {
+      sourceEntityId: 6,
+      processingStartedAt,
+      status: 'failed',
+    })
+
+    const reservedEvent = await new EventRepository().reserveNextPendingEvent()
+
+    assert.isNull(reservedEvent)
+  })
+
+  test('reserves the oldest pending event first', async ({ assert }) => {
+    const dependencies = await seedEventDependencies()
+
+    await createSojalinkEvent(dependencies, {
+      sourceEntityId: 2,
+      createdAt: DateTime.utc(2026, 1, 2),
+    })
+
+    const olderEvent = await createSojalinkEvent(dependencies, {
+      sourceEntityId: 3,
+      createdAt: DateTime.utc(2026, 1, 1),
+    })
+
+    const reservedEvent = await new EventRepository().reserveNextPendingEvent()
+
+    assert.equal(reservedEvent?.id, olderEvent.id)
+
+    const pendingEvents = await SojalinkEvent.query().where('status', 'pending')
+
+    assert.lengthOf(pendingEvents, 1)
+    assert.equal(pendingEvents[0].sourceEntityId, 2)
+  })
+
+  test('does not reserve the same event twice under concurrency', async ({ assert }) => {
+    const dependencies = await seedEventDependencies()
+    const event = await createSojalinkEvent(dependencies)
+    const repository = new EventRepository()
+
+    const reservedEvents = await Promise.all([
+      repository.reserveNextPendingEvent(),
+      repository.reserveNextPendingEvent(),
+    ])
+
+    await event.refresh()
+
+    assert.equal(event.status, 'processing')
+
+    assert.lengthOf(
+      reservedEvents.filter((reservedEvent) => reservedEvent?.id === event.id),
+      1
+    )
+
+    assert.lengthOf(
+      reservedEvents.filter((reservedEvent) => reservedEvent === null),
+      1
+    )
   })
 })
 

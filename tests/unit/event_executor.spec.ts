@@ -1,11 +1,26 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import app from '@adonisjs/core/services/app'
-import testUtils from '@adonisjs/core/services/test_utils'
+import SojalinkEventTypeSeeder from '#database/seeders/sojalink_event_type_seeder'
+import SojalinkRuleSeeder from '#database/seeders/sojalink_rule_seeder'
+import SojalinkRuleVersionSeeder from '#database/seeders/sojalink_rule_version_seeder'
+import SojalinkEventSeeder from '#database/seeders/sojalink_event_seeder'
 import { EventExecutor } from '#application/events/event_executor'
 import { EventRepository } from '#persistence/events/event_repository'
 import type { ProcessingEvent } from '#domain/events/event'
-import { seedEventGraphWithPendingEvent } from '#tests/helpers/event_graph_factory'
+
+async function seedContext() {
+  const client = db.connection()
+  await new SojalinkEventTypeSeeder(client).run()
+  await new SojalinkRuleSeeder(client).run()
+  await new SojalinkRuleVersionSeeder(client).run()
+  await new SojalinkEventSeeder(client).run()
+
+  const event = await db.from('sojalink_events').where('status', 'pending').first()
+  const ruleVersion = await db.from('sojalink_rule_versions').where('is_active', 1).first()
+
+  return { eventId: event.id, ruleVersionId: ruleVersion.id }
+}
 
 async function setEventProcessing(eventId: number, ruleVersionId: number) {
   await db.from('sojalink_events').where('id', eventId).update({
@@ -41,12 +56,20 @@ async function executeEvent(eventId: number) {
 }
 
 test.group('EventExecutor', (group) => {
-  group.each.setup(() => testUtils.db().wrapInGlobalTransaction())
+  group.each.setup(async () => {
+    await db.from('sojalink_step_logs').delete()
+    await db.from('sojalink_attempts').delete()
+    await db.from('sojalink_entity_correlations').delete()
+    await db.from('sojalink_events').delete()
+    await db.from('sojalink_rule_versions').delete()
+    await db.from('sojalink_rules').delete()
+    await db.from('sojalink_event_types').delete()
+  })
 
   test('executes a single-step pipeline and traces the attempt and step log', async ({
     assert,
   }) => {
-    const { eventId, ruleVersionId } = await seedEventGraphWithPendingEvent()
+    const { eventId, ruleVersionId } = await seedContext()
     await setEventProcessing(eventId, ruleVersionId)
     await setPipeline(ruleVersionId, [{ key: 'notify_team', handler: 'email_notification' }])
 
@@ -70,7 +93,7 @@ test.group('EventExecutor', (group) => {
   })
 
   test('executes multiple steps in order, one step log each', async ({ assert }) => {
-    const { eventId, ruleVersionId } = await seedEventGraphWithPendingEvent()
+    const { eventId, ruleVersionId } = await seedContext()
     await setEventProcessing(eventId, ruleVersionId)
     await setPipeline(ruleVersionId, [
       { key: 'first_step', handler: 'email_notification' },
@@ -95,7 +118,7 @@ test.group('EventExecutor', (group) => {
   })
 
   test('resolves event and previous step references in step inputs', async ({ assert }) => {
-    const { eventId, ruleVersionId } = await seedEventGraphWithPendingEvent()
+    const { eventId, ruleVersionId } = await seedContext()
     await setEventProcessing(eventId, ruleVersionId)
     await setPipeline(ruleVersionId, [
       { key: 'first_step', handler: 'email_notification' },
@@ -127,7 +150,7 @@ test.group('EventExecutor', (group) => {
   })
 
   test('refuses to create a second active attempt for the same event', async ({ assert }) => {
-    const { eventId, ruleVersionId } = await seedEventGraphWithPendingEvent()
+    const { eventId, ruleVersionId } = await seedContext()
     await setEventProcessing(eventId, ruleVersionId)
     await setPipeline(ruleVersionId, [{ key: 'notify_team', handler: 'email_notification' }])
 
@@ -144,7 +167,7 @@ test.group('EventExecutor', (group) => {
   test('fails the step and the attempt when an input reference cannot be resolved', async ({
     assert,
   }) => {
-    const { eventId, ruleVersionId } = await seedEventGraphWithPendingEvent()
+    const { eventId, ruleVersionId } = await seedContext()
     await setEventProcessing(eventId, ruleVersionId)
     await setPipeline(ruleVersionId, [
       {
@@ -176,7 +199,7 @@ test.group('EventExecutor', (group) => {
   })
 
   test('rejects a pipeline without steps before creating any step log', async ({ assert }) => {
-    const { eventId, ruleVersionId } = await seedEventGraphWithPendingEvent()
+    const { eventId, ruleVersionId } = await seedContext()
     await setEventProcessing(eventId, ruleVersionId)
     await setPipeline(ruleVersionId, [])
 
@@ -193,7 +216,7 @@ test.group('EventExecutor', (group) => {
   test('rejects a pipeline referencing an unknown handler at validation time', async ({
     assert,
   }) => {
-    const { eventId, ruleVersionId } = await seedEventGraphWithPendingEvent()
+    const { eventId, ruleVersionId } = await seedContext()
     await setEventProcessing(eventId, ruleVersionId)
     await setPipeline(ruleVersionId, [
       { key: 'first_step', handler: 'unknown_handler' },
@@ -211,7 +234,7 @@ test.group('EventExecutor', (group) => {
   })
 
   test('rejects a pipeline with duplicate step keys', async ({ assert }) => {
-    const { eventId, ruleVersionId } = await seedEventGraphWithPendingEvent()
+    const { eventId, ruleVersionId } = await seedContext()
     await setEventProcessing(eventId, ruleVersionId)
     await setPipeline(ruleVersionId, [
       { key: 'notify_team', handler: 'email_notification' },
@@ -222,7 +245,7 @@ test.group('EventExecutor', (group) => {
   })
 
   test('rejects a pipeline referencing a future step', async ({ assert }) => {
-    const { eventId, ruleVersionId } = await seedEventGraphWithPendingEvent()
+    const { eventId, ruleVersionId } = await seedContext()
     await setEventProcessing(eventId, ruleVersionId)
     await setPipeline(ruleVersionId, [
       {
@@ -237,7 +260,7 @@ test.group('EventExecutor', (group) => {
   })
 
   test('rejects an event without an applied rule version', async ({ assert }) => {
-    const { eventId } = await seedEventGraphWithPendingEvent()
+    const { eventId } = await seedContext()
 
     await db.from('sojalink_events').where('id', eventId).update({
       status: 'processing',

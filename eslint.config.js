@@ -1,4 +1,4 @@
-import { configApp, RULES_LIST } from '@adonisjs/eslint-config'
+import { configApp } from '@adonisjs/eslint-config'
 
 const lucidModelImports = [
   '#models/sojalink_event',
@@ -11,29 +11,11 @@ const lucidModelImports = [
 ].map((name) => ({
   name,
   message:
-    'Les modèles Lucid sont réservés à app/persistence et app/http. Utilise un objet métier exposé par app/domain.',
+    'Les modèles Lucid sont réservés à app/persistence. Utilise un objet métier exposé par app/domain.',
 }))
 
 export default [
   ...configApp(),
-
-  {
-    ignores: ['inertia/components/ui/**'],
-    name: 'Custom config for Inertia projects',
-    files: ['inertia/**/*.ts', 'inertia/**/*.tsx'],
-    rules: {
-      ...RULES_LIST,
-      '@unicorn/filename-case': [
-        'error',
-        {
-          cases: {
-            pascalCase: true,
-            camelCase: true,
-          },
-        },
-      ],
-    },
-  },
 
   {
     // Generated file (node ace migration:run), not formatted by hand.
@@ -42,7 +24,7 @@ export default [
 
   {
     files: ['app/**/*.ts'],
-    ignores: ['app/models/**/*.ts', 'app/persistence/**/*.ts', 'app/http/**/*.ts'],
+    ignores: ['app/models/**/*.ts', 'app/persistence/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
