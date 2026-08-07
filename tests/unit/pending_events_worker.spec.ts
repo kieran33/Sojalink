@@ -13,7 +13,11 @@ test.group('PendingEventsWorker', () => {
       },
     }
 
-    await new PendingEventsWorker(eventProcessor as never).handle()
+    const workerHealthRepository = {
+      recordRun: async () => {},
+    }
+
+    await new PendingEventsWorker(eventProcessor as never, workerHealthRepository as never).handle()
 
     assert.equal(calls, 1)
   })
