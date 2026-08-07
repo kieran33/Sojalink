@@ -4,7 +4,8 @@ import { CodeBlock } from '@/components/CodeBlock'
 import { isPipeline, type RuleVersion } from '@/lib/rule'
 
 export function RulePipelineCard({ version }: { version: RuleVersion | undefined }) {
-  const pipeline = isPipeline(version?.pipeline) ? version.pipeline : null
+  const rawPipeline = version?.pipeline as unknown
+  const pipeline = isPipeline(rawPipeline) ? rawPipeline : null
 
   return (
     <Card>
