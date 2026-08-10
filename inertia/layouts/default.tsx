@@ -6,6 +6,7 @@ import { AppSidebar } from '~/components/AppSidebar'
 import { ThemeToggle } from '~/components/ThemeToggle'
 import { UserMenu } from '~/components/UserMenu'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { WorkerStatusBadge } from '~/components/WorkerStatusBadge'
 
 export default function Layout({ children }: { children: ReactElement<Data.SharedProps> }) {
   useEffect(() => {
@@ -38,7 +39,8 @@ export default function Layout({ children }: { children: ReactElement<Data.Share
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-4" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <WorkerStatusBadge {...children.props.worker} />
             <UserMenu username={children.props.user.username} />
             <ThemeToggle />
           </div>
