@@ -7,4 +7,5 @@ export const controllers = {
   Dashboard: () => import('#controllers/dashboard_controller'),
   Registrations: () => import('#controllers/registrations_controller'),
   Rules: () => import('#controllers/rules_controller'),
+  Sessions: () => import('#controllers/sessions_controller'),
 }
