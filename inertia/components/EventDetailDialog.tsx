@@ -164,13 +164,13 @@ function EventTimeline({ event }: { event: RuleEvent }) {
 
   const steps = [
     { label: 'Créé', at: event.createdAt as string | null, done: true, failed: false },
-    { label: 'Résolu', at: event.resolvedAt, done: Boolean(event.resolvedAt), failed: false },
     {
       label: 'En traitement',
       at: event.processingStartedAt,
       done: Boolean(event.processingStartedAt),
       failed: false,
     },
+    { label: 'Résolu', at: event.resolvedAt, done: Boolean(event.resolvedAt), failed: false },
     {
       label: failed ? 'Échec' : 'Traité',
       at: event.processedAt ?? event.failedAt,

@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { EventDetailDialog } from '@/components/EventDetailDialog'
 import {
   eventBadgeVariant,
@@ -18,6 +19,16 @@ import {
   type RuleShowData,
   type RuleVersion,
 } from '@/lib/rule'
+
+const STATUS_FILTERS = [
+  { value: 'all', label: 'Tous' },
+  { value: 'pending', label: 'En attente' },
+  { value: 'processing', label: 'En cours' },
+  { value: 'processed', label: 'Traité' },
+  { value: 'failed', label: 'Échec' },
+] as const
+
+type StatusFilter = (typeof STATUS_FILTERS)[number]['value']
 
 export function RuleEventsCard({
   events,
@@ -31,6 +42,10 @@ export function RuleEventsCard({
   onSelectVersion: (versionId: number) => void
 }) {
   const [selectedEvent, setSelectedEvent] = useState<RuleEvent | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+
+  const filteredEvents =
+    statusFilter === 'all' ? events : events.filter((event) => event.status === statusFilter)
 
   return (
     <Card>
@@ -38,11 +53,31 @@ export function RuleEventsCard({
         <CardTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Historique des événements
         </CardTitle>
-        <CardDescription>{events.length} au total</CardDescription>
+        <CardDescription>
+          {filteredEvents.length} affiché{filteredEvents.length > 1 ? 's' : ''} sur {events.length}{' '}
+          au total
+        </CardDescription>
+        {events.length > 0 && (
+          <ToggleGroup
+            value={[statusFilter]}
+            onValueChange={(value) => {
+              if (value[0]) setStatusFilter(value[0] as StatusFilter)
+            }}
+            className="justify-start"
+          >
+            {STATUS_FILTERS.map((filter) => (
+              <ToggleGroupItem key={filter.value} value={filter.value} size="sm">
+                {filter.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        )}
       </CardHeader>
       <CardContent>
         {events.length === 0 ? (
           <span className="text-muted-foreground">Aucun événement pour cette version</span>
+        ) : filteredEvents.length === 0 ? (
+          <span className="text-muted-foreground">Aucun événement avec ce statut</span>
         ) : (
           <Table>
             <TableHeader>
@@ -55,7 +90,7 @@ export function RuleEventsCard({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((event) => (
+              {filteredEvents.map((event) => (
                 <TableRow
                   key={event.id}
                   role="button"
