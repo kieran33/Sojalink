@@ -4,8 +4,8 @@ import { usePage } from '@inertiajs/react'
 import { type ReactElement, useEffect } from 'react'
 import { AppSidebar } from '~/components/AppSidebar'
 import { ThemeToggle } from '~/components/ThemeToggle'
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { UserMenu } from '~/components/UserMenu'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 
 export default function Layout({ children }: { children: ReactElement<Data.SharedProps> }) {
   useEffect(() => {
@@ -21,6 +21,15 @@ export default function Layout({ children }: { children: ReactElement<Data.Share
     }
   })
 
+  if (!children.props.user) {
+    return (
+      <>
+        {children}
+        <Toaster position="top-center" richColors />
+      </>
+    )
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -30,7 +39,7 @@ export default function Layout({ children }: { children: ReactElement<Data.Share
             <SidebarTrigger className="-ml-4" />
           </div>
           <div className="flex items-center gap-2">
-            {children.props.user && <UserMenu username={children.props.user.username} />}
+            <UserMenu username={children.props.user.username} />
             <ThemeToggle />
           </div>
         </header>
