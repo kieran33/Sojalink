@@ -16,7 +16,7 @@ export default class SessionsController {
     const { username, password } = await request.validateUsing(loginValidator)
 
     if (await this.loginAttemptsRepository.isLocked(username)) {
-      session.flash('error', 'Informations de connexion incorrect, veuillez réessayer.')
+      session.flash('error', 'Trop de tentatives échouées, veuillez réessayer plus tard.')
       return response.redirect().back()
     }
 

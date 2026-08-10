@@ -15,7 +15,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
         error,
         success,
       }),
-      user: ctx.inertia.always(auth?.user ? { username: auth.user.username } : null),
+      user: ctx.inertia.always(auth?.user ? { username: auth.user.username } : undefined),
     }
   }
 
