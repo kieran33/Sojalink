@@ -114,7 +114,7 @@ export class SojalinkEntityCorrelationSchema extends BaseModel {
 }
 
 export class SojalinkEventSchema extends BaseModel {
-  static $columns = ['appliedRuleVersionId', 'createdAt', 'eventTypeId', 'id', 'payloadJson', 'processedAt', 'processingStartedAt', 'resolutionSnapshotJson', 'sourceApp', 'sourceEntityId', 'sourceEntityType', 'status', 'updatedAt'] as const
+  static $columns = ['appliedRuleVersionId', 'createdAt', 'eventTypeId', 'failedAt', 'id', 'payloadJson', 'processedAt', 'processingStartedAt', 'resolutionErrorCode', 'resolutionErrorMessage', 'resolutionSnapshotJson', 'resolvedAt', 'sourceApp', 'sourceEntityId', 'sourceEntityType', 'status', 'updatedAt'] as const
   $columns = SojalinkEventSchema.$columns
   @column()
   declare appliedRuleVersionId: number | null
@@ -122,6 +122,8 @@ export class SojalinkEventSchema extends BaseModel {
   declare createdAt: DateTime
   @column()
   declare eventTypeId: number
+  @column.dateTime()
+  declare failedAt: DateTime | null
   @column({ isPrimary: true })
   declare id: number
   @column()
@@ -131,7 +133,13 @@ export class SojalinkEventSchema extends BaseModel {
   @column.dateTime()
   declare processingStartedAt: DateTime | null
   @column()
+  declare resolutionErrorCode: string | null
+  @column()
+  declare resolutionErrorMessage: string | null
+  @column()
   declare resolutionSnapshotJson: string | null
+  @column.dateTime()
+  declare resolvedAt: DateTime | null
   @column()
   declare sourceApp: string
   @column()
@@ -204,7 +212,7 @@ export class SojalinkRuleVersionSchema extends BaseModel {
 }
 
 export class SojalinkStepLogSchema extends BaseModel {
-  static $columns = ['attemptId', 'errorCode', 'errorMessage', 'finishedAt', 'handlerKey', 'id', 'inputJson', 'outputJson', 'startedAt', 'status', 'stepCode', 'stepIndex'] as const
+  static $columns = ['attemptId', 'errorCode', 'errorMessage', 'finishedAt', 'handlerName', 'id', 'inputJson', 'outputJson', 'startedAt', 'status', 'stepCode', 'stepIndex'] as const
   $columns = SojalinkStepLogSchema.$columns
   @column()
   declare attemptId: number
@@ -215,7 +223,7 @@ export class SojalinkStepLogSchema extends BaseModel {
   @column.dateTime()
   declare finishedAt: DateTime | null
   @column()
-  declare handlerKey: string
+  declare handlerName: string
   @column({ isPrimary: true })
   declare id: number
   @column()
