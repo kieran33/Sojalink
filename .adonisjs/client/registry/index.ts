@@ -6,6 +6,36 @@ import type { ApiDefinition } from './tree.d.ts'
 const placeholder: any = {}
 
 const routes = {
+  'login.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/connexion',
+    tokens: [{"old":"/connexion","type":0,"val":"connexion","end":""}],
+    types: placeholder as Registry['login.show']['types'],
+  },
+  'login.store': {
+    methods: ["POST"],
+    pattern: '/connexion',
+    tokens: [{"old":"/connexion","type":0,"val":"connexion","end":""}],
+    types: placeholder as Registry['login.store']['types'],
+  },
+  'logout': {
+    methods: ["POST"],
+    pattern: '/deconnexion',
+    tokens: [{"old":"/deconnexion","type":0,"val":"deconnexion","end":""}],
+    types: placeholder as Registry['logout']['types'],
+  },
+  'register.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/inscription',
+    tokens: [{"old":"/inscription","type":0,"val":"inscription","end":""}],
+    types: placeholder as Registry['register.show']['types'],
+  },
+  'register.store': {
+    methods: ["POST"],
+    pattern: '/inscription',
+    tokens: [{"old":"/inscription","type":0,"val":"inscription","end":""}],
+    types: placeholder as Registry['register.store']['types'],
+  },
   'dashboard': {
     methods: ["GET","HEAD"],
     pattern: '/dashboard',

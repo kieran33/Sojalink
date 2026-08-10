@@ -239,3 +239,18 @@ export class SojalinkStepLogSchema extends BaseModel {
   @column()
   declare stepIndex: number
 }
+
+export class UserSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'password', 'updatedAt', 'username'] as const
+  $columns = UserSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column({ serializeAs: null })
+  declare password: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare username: string
+}

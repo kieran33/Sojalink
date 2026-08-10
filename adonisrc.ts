@@ -60,6 +60,7 @@ export default defineConfig({
     () => import('@adonisjs/inertia/inertia_provider'),
     () => import('@adonisjs/queue/queue_provider'),
     () => import('@adonisjs/redis/redis_provider'),
+    () => import('@adonisjs/auth/auth_provider'),
   ],
 
   /*

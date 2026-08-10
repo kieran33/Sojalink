@@ -5,6 +5,7 @@ import { type ReactElement, useEffect } from 'react'
 import { AppSidebar } from '~/components/AppSidebar'
 import { ThemeToggle } from '~/components/ThemeToggle'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { UserMenu } from '~/components/UserMenu'
 
 export default function Layout({ children }: { children: ReactElement<Data.SharedProps> }) {
   useEffect(() => {
@@ -28,7 +29,10 @@ export default function Layout({ children }: { children: ReactElement<Data.Share
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-4" />
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            {children.props.user && <UserMenu username={children.props.user.username} />}
+            <ThemeToggle />
+          </div>
         </header>
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
