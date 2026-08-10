@@ -10,7 +10,7 @@ export default class AuthMiddleware {
   /**
    * The URL to redirect to, when authentication fails
    */
-  redirectTo = '/login'
+  redirectTo = '/connexion'
 
   async handle(
     ctx: HttpContext,
