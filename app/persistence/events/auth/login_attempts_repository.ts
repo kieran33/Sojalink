@@ -6,15 +6,15 @@ const REPEATED_LOCKOUT_SECONDS = 60 * 60 * 24
 
 export class LoginAttemptsRepository {
   private attemptsKey(username: string) {
-    return `login_attempts:${username}`
+    return `login_failed_attempts:${username}`
   }
 
   private lockoutUntilKey(username: string) {
-    return `login_lockout_until:${username}`
+    return `login_lockout_expires_at:${username}`
   }
 
   private lockoutCountKey(username: string) {
-    return `login_lockout_count:${username}`
+    return `login_lockouts_count:${username}`
   }
 
   async isLocked(username: string): Promise<boolean> {
