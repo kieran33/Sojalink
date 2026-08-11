@@ -6,9 +6,6 @@ export type RuleEvent = NonNullable<RuleVersion['events']>[number]
 export type RuleAttempt = NonNullable<RuleEvent['attempts']>[number]
 export type RuleStepLog = NonNullable<RuleAttempt['stepLogs']>[number]
 
-// Shape of `conditions_json`, see docs/rule_resolver.md — a leaf is a terminal
-// check (e.g. { op: "eq", field: "sourceApp", value: "SojadisPro" }), `all`
-// groups nested conditions that must all be true.
 type LeafCondition = { op: string; field: string; value: unknown }
 type AllCondition = { all: Condition[] }
 type Condition = LeafCondition | AllCondition

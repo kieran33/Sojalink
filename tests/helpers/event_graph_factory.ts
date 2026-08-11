@@ -10,12 +10,6 @@ export type EventGraph = {
   ruleVersionId: number
 }
 
-/**
- * Seeds one event type, its active rule and the rule's active version —
- * the minimal graph every resolver/executor integration test needs
- * before it can act on an event. Shared here so each spec stops
- * re-declaring its own near-identical seeding helper.
- */
 export async function seedEventGraph(): Promise<EventGraph> {
   const client = db.connection()
 
@@ -44,11 +38,6 @@ export async function seedEventGraph(): Promise<EventGraph> {
   return { eventTypeId: eventType.id, ruleId: rule.id, ruleVersionId: ruleVersion.id }
 }
 
-/**
- * seedEventGraph() plus the pending event shipped by SojalinkEventSeeder,
- * for tests that need a processable event rather than just the graph
- * it will be matched against.
- */
 export async function seedEventGraphWithPendingEvent(): Promise<EventGraph & { eventId: number }> {
   const graph = await seedEventGraph()
 

@@ -11,11 +11,6 @@ export function selectDisplayedVersion(versions: SojalinkRuleVersion[]) {
 
 const RECENT_EVENTS_LIMIT = 3
 
-/**
- * Merges events applied across every version of a rule (not just the
- * displayed one) so the dashboard card shows the rule's latest activity
- * even when its history spans several versions.
- */
 export function selectRecentEvents(versions: SojalinkRuleVersion[], limit = RECENT_EVENTS_LIMIT) {
   return versions
     .flatMap((version) => version.appliedEvents)
@@ -24,9 +19,6 @@ export function selectRecentEvents(versions: SojalinkRuleVersion[], limit = RECE
 }
 
 export default class RuleTransformer extends BaseTransformer<SojalinkRule> {
-  /**
-   * Variante légère : liste du dashboard
-   */
   toObject() {
     const displayedVersion = selectDisplayedVersion(this.resource.versions)
     const recentEvents = selectRecentEvents(this.resource.versions)
@@ -39,9 +31,6 @@ export default class RuleTransformer extends BaseTransformer<SojalinkRule> {
     }
   }
 
-  /**
-   * Variante détaillée : page d'une règle, historique complet
-   */
   forShowPage() {
     return {
       ...this.toObject(),
