@@ -19,9 +19,9 @@ export function WorkerStatusBadge({
         }
       />
       Worker {isRunning ? 'actif' : 'inactif'}
-      {lastRunAtFormatted && <span>· dernier passage {lastRunAtFormatted}</span>}
+      {lastRunAtFormatted && <span>· dernier cycle {lastRunAtFormatted}</span>}
       {averageDurationInMs !== null && (
-        <span>· ~{Math.round(averageDurationInMs)}ms en moyenne</span>
+        <span>- {Math.round(averageDurationInMs)}ms en moyenne</span>
       )}
     </div>
   )
