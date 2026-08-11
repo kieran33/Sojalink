@@ -5,10 +5,6 @@ import testUtils from '@adonisjs/core/services/test_utils'
 import { EventProcessor } from '#application/events/event_processor'
 import { seedEventGraphWithPendingEvent } from '#tests/helpers/event_graph_factory'
 
-/**
- * End-to-end coverage of one polling tick:
- * reservation -> rule resolution -> pipeline execution -> final status.
- */
 async function processNextEvent() {
   const processor = await app.container.make(EventProcessor)
 

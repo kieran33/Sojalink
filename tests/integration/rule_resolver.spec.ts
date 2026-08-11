@@ -11,11 +11,6 @@ import { seedEventGraph, type EventGraph } from '#tests/helpers/event_graph_fact
 
 type EventDependencies = EventGraph
 
-/**
- * seedEventGraph() overridden with a condition this file's tests can
- * reliably satisfy or violate (`payload.source_app`) rather than the
- * seeded default.
- */
 async function seedEvent(): Promise<EventDependencies> {
   const graph = await seedEventGraph()
 

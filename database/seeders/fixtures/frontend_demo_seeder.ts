@@ -7,21 +7,6 @@ import SojalinkEvent from '#models/sojalink_event'
 import SojalinkAttempt from '#models/sojalink_attempt'
 import SojalinkStepLog from '#models/sojalink_step_log'
 
-/**
- * Fixture de données pour le développement du frontend : une trentaine
- * d'automatisations (règle + pipeline) réparties sur autant de domaines
- * métier, chacune avec quelques events déjà dans leur état final
- * (processed / failed / pending, avec attempts et step logs).
- *
- * Contrairement aux seeders de database/seeders/scenarios/ (un event
- * `pending` à la fois, traité en direct par le worker), celui-ci écrit
- * tout directement : pas besoin du worker pour avoir du contenu.
- *
- * Restreint à `development`. Rejoué par un `node ace db:seed` global,
- * ou isolément :
- *   node ace db:seed --files "database/seeders/fixtures/frontend_demo_seeder.ts"
- */
-
 type AutomationStep = { key: string }
 
 type AutomationDef = {
@@ -435,8 +420,6 @@ export default class FrontendDemoSeeder extends BaseSeeder {
     const baseEntityId = 1000 + index * 10
 
     if (automation.broken) {
-      // Une règle au pipeline invalide n'exécute jamais aucun step : pas
-      // d'events "processed" possibles, uniquement des rejets tracés.
       await this.seedPipelineRejectedEvent({
         eventTypeId,
         ruleVersion,
@@ -489,7 +472,7 @@ export default class FrontendDemoSeeder extends BaseSeeder {
         sourceApp: automation.sourceApp,
         sourceEntityType: 'record',
         sourceEntityId: baseEntityId + 3,
-        payload: { id: baseEntityId + 3 }, // pas de "label" -> template non résolu
+        payload: { id: baseEntityId + 3 },
         createdAt: now.minus({ hours: (index % 14) + 2 }),
         succeededSteps: [],
         failingStep: {

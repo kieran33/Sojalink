@@ -40,16 +40,6 @@ async function createSojalinkEvent(
 }
 
 test.group('EventRepository.reserveNextPendingEvent', (group) => {
-  /**
-   * Deliberately NOT testUtils.db().wrapInGlobalTransaction() here: the
-   * "concurrency" test below needs reserveNextPendingEvent() to run in two
-   * real, separate transactions so its `forUpdate().skipLocked()` actually
-   * has another session's lock to skip. A shared global test transaction
-   * would put both calls on the same session, and the second call would
-   * just see the first one's uncommitted update instead of ever hitting a
-   * lock — the test would still go green, but it would stop proving what
-   * its name says.
-   */
   group.each.setup(async () => {
     await db.from('sojalink_step_logs').delete()
     await db.from('sojalink_attempts').delete()
