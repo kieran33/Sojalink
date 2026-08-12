@@ -12,16 +12,22 @@ export function WorkerStatusBadge({
   averageDurationInMs,
 }: WorkerStatusBadgeProps) {
   return (
-    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+    <div className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
       <CircleIcon
         className={
-          isRunning ? 'h-2 w-2 fill-green-500 text-green-500' : 'h-2 w-2 fill-red-500 text-red-500'
+          isRunning
+            ? 'h-2 w-2 shrink-0 fill-green-500 text-green-500'
+            : 'h-2 w-2 shrink-0 fill-red-500 text-red-500'
         }
       />
-      Worker {isRunning ? 'actif' : 'inactif'}
-      {lastRunAtFormatted && <span>· dernier cycle {lastRunAtFormatted}</span>}
+      <span className="whitespace-nowrap">Worker {isRunning ? 'actif' : 'inactif'}</span>
+      {lastRunAtFormatted && (
+        <span className="hidden truncate lg:inline">- dernier cycle {lastRunAtFormatted}</span>
+      )}
       {averageDurationInMs !== null && (
-        <span>- {Math.round(averageDurationInMs)}ms en moyenne</span>
+        <span className="hidden shrink-0 lg:inline">
+          - {Math.round(averageDurationInMs)}ms en moyenne
+        </span>
       )}
     </div>
   )
