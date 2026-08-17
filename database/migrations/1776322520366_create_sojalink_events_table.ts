@@ -36,7 +36,7 @@ export default class extends BaseSchema {
 
       table.text('resolution_snapshot_json', 'longtext').nullable()
       table.string('resolution_error_code', 100).nullable().index()
-      table.text('resolution_error_message', 'longtext').nullable()
+      table.text('resolution_error_message').nullable()
 
       table.datetime('created_at').notNullable().defaultTo(this.now()).index()
       table.datetime('updated_at').nullable()
