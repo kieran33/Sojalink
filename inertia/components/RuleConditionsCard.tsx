@@ -1,7 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CodeBlock } from '@/components/CodeBlock'
 import { flattenConditions, type RuleVersion } from '@/lib/rule'
-import { cn } from '@/lib/utils'
 
 export function RuleConditionsCard({ version }: { version: RuleVersion | undefined }) {
   const leaves = version ? flattenConditions(version.conditions) : null
