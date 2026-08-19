@@ -79,7 +79,7 @@ export default function DashboardIndex({ rules, stats, pagination }: PageProps) 
       {viewMode === 'cards' ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rules.map((rule) => (
-            <RuleCard key={rule.id} rule={rule} />
+            <RuleCard key={rule.id} rule={rule} version={rule.displayedVersion} />
           ))}
         </div>
       ) : (
