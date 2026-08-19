@@ -1,7 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CodeBlock } from '@/components/CodeBlock'
 import { flattenConditions, type RuleVersion } from '@/lib/rule'
-import { cn } from '@/lib/utils'
 
 export function RuleConditionsCard({ version }: { version: RuleVersion | undefined }) {
   const leaves = version ? flattenConditions(version.conditions) : null
@@ -12,19 +11,12 @@ export function RuleConditionsCard({ version }: { version: RuleVersion | undefin
         <CardTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Conditions de déclenchement
         </CardTitle>
-        {version && (
-          <CardDescription className={cn(version.isActive && 'text-primary')}>
-            {version.isActive ? 'Version active' : 'Version'} v{version.versionNumber}
-          </CardDescription>
-        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {leaves ? (
           <>
             <p className="text-sm text-muted-foreground">
-              {leaves.length > 1
-                ? 'Toutes les conditions suivantes doivent être vraies :'
-                : 'La condition suivante doit être vraie :'}
+              {leaves.length > 1 ? 'Doivent toutes être vraies :' : 'Doit être vraie :'}
             </p>
             <div className="flex flex-col gap-2">
               {leaves.map((leaf, index) => (
