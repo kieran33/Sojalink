@@ -14,7 +14,13 @@ import { cn } from '@/lib/utils'
 import type { RuleVersion } from '~/lib/rule'
 
 function eventBadgeVariant(status: Data.Event['status']) {
-  return status === 'failed' ? 'destructive' : 'secondary'
+  if (status === 'failed') return 'destructive'
+  if (status === 'processed') return 'success'
+  return 'secondary'
+}
+
+function eventDisplayDate(event: Data.Event) {
+  return event.status === 'failed' ? event.failedAt : event.processedAt
 }
 
 function formatEventDate(dateString: string | null) {
@@ -54,7 +60,7 @@ export function RuleCard({ rule, version }: { rule: Data.Rule; version: RuleVers
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
             <span className="text-[0.625rem] font-medium tracking-wide text-muted-foreground uppercase">
-              Derniers événements
+              Derniers événements traités par le worker
             </span>
 
             {rule.recentEvents.length === 0 ? (
@@ -74,7 +80,7 @@ export function RuleCard({ rule, version }: { rule: Data.Rule; version: RuleVers
                         {event.sourceEntityType} #{event.sourceEntityId}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {formatEventDate(event.createdAt)}
+                        {formatEventDate(eventDisplayDate(event))}
                       </TableCell>
                       <TableCell className="text-right">
                         <Badge variant={eventBadgeVariant(event.status)}>{event.statusLabel}</Badge>

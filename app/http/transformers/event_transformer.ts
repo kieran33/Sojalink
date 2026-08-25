@@ -7,7 +7,7 @@ import EventTypeTransformer from '#transformers/event_type_transformer'
 const STATUS_LABELS: Record<EventStatus, string> = {
   pending: 'En attente',
   processing: 'En cours',
-  processed: 'Traité',
+  processed: 'Succès',
   failed: 'Échec',
 }
 

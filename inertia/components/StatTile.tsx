@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 type StatTileProps = {
   label: string
   value: number
-  tone?: 'default' | 'destructive'
+  tone?: 'default' | 'destructive' | 'success'
 }
 
 export function StatTile({ label, value, tone = 'default' }: StatTileProps) {
@@ -15,7 +15,11 @@ export function StatTile({ label, value, tone = 'default' }: StatTileProps) {
           {label}
         </span>
         <span
-          className={cn('text-2xl font-semibold', tone === 'destructive' && 'text-destructive')}
+          className={cn(
+            'text-2xl font-semibold',
+            tone === 'destructive' && 'text-destructive',
+            tone === 'success' && 'text-success'
+          )}
         >
           {value}
         </span>
