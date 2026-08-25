@@ -14,10 +14,10 @@ export default class Scenario3MultiStepSeeder extends BaseSeeder {
     )
 
     const rule = await SojalinkRule.updateOrCreate(
-      { code: 'scenario-multi-step' },
+      { code: 'rule-multi-step' },
       {
-        code: 'scenario-multi-step',
-        label: 'Scenario multi step',
+        code: 'rule-multi-step',
+        label: 'Règle multi-étapes',
         eventTypeId: eventType.id,
         priority: 5,
         isActive: true,

@@ -14,10 +14,10 @@ export default class Scenario2NoMatchingRuleSeeder extends BaseSeeder {
     )
 
     const rule = await SojalinkRule.updateOrCreate(
-      { code: 'scenario-no-matching-rule' },
+      { code: 'rule-no-match' },
       {
-        code: 'scenario-no-matching-rule',
-        label: 'Scenario no matching rule',
+        code: 'rule-no-match',
+        label: 'Règle non correspondante',
         eventTypeId: eventType.id,
         priority: 5,
         isActive: true,
