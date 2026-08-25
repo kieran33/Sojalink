@@ -19,11 +19,11 @@ export function RuleStatsCard({ events }: { events: RuleEvent[] }) {
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Événements traités</p>
-          <p className="text-2xl font-semibold">{stats.processed}</p>
+          <p className="text-xs text-muted-foreground">Événements réussis</p>
+          <p className="text-2xl font-semibold text-success">{stats.processed}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Échecs</p>
+          <p className="text-xs text-muted-foreground">Événements échoués</p>
           <p className="text-2xl font-semibold text-destructive">{stats.failed}</p>
         </div>
       </CardContent>

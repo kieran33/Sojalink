@@ -11,7 +11,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 
 function eventBadgeVariant(status: Data.Event['status']) {
-  return status === 'failed' ? 'destructive' : 'secondary'
+  if (status === 'failed') return 'destructive'
+  if (status === 'processed') return 'success'
+  return 'secondary'
 }
 
 export function RulesTable({ rules }: { rules: Data.Rule[] }) {
@@ -24,7 +26,7 @@ export function RulesTable({ rules }: { rules: Data.Rule[] }) {
           <TableHead>Priorité</TableHead>
           <TableHead>Statut</TableHead>
           <TableHead>Version</TableHead>
-          <TableHead>Derniers événements</TableHead>
+          <TableHead>Derniers événements traités par le worker</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
