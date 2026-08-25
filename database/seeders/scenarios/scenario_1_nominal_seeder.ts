@@ -14,10 +14,10 @@ export default class Scenario1NominalSeeder extends BaseSeeder {
     )
 
     const rule = await SojalinkRule.updateOrCreate(
-      { code: 'scenario-nominal' },
+      { code: 'rule-nominal' },
       {
-        code: 'scenario-nominal',
-        label: 'Scenario nominal',
+        code: 'rule-nominal',
+        label: 'Règle nominale',
         eventTypeId: eventType.id,
         priority: 5,
         isActive: true,

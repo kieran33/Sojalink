@@ -14,10 +14,10 @@ export default class Scenario5InvalidPipelineSeeder extends BaseSeeder {
     )
 
     const rule = await SojalinkRule.updateOrCreate(
-      { code: 'scenario-invalid-pipeline' },
+      { code: 'rule-invalid-pipeline' },
       {
-        code: 'scenario-invalid-pipeline',
-        label: 'Scenario invalid pipeline',
+        code: 'rule-invalid-pipeline',
+        label: 'Règle pipeline invalide',
         eventTypeId: eventType.id,
         priority: 5,
         isActive: true,

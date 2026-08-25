@@ -52,8 +52,12 @@ export default function DashboardIndex({ rules, stats, pagination }: PageProps) 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Règles totales" value={stats.totalRules} />
         <StatTile label="Règles actives" value={stats.activeRules} />
-        <StatTile label="Traités (24h)" value={stats.processedLast24h} />
-        <StatTile label="En échec (24h)" value={stats.failedLast24h} tone="destructive" />
+        <StatTile label="Événements traités (24h)" value={stats.processedLast24h} />
+        <StatTile
+          label="Événements en échec (24h)"
+          value={stats.failedLast24h}
+          tone="destructive"
+        />
       </div>
 
       <div className="flex items-center justify-between">

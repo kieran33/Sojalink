@@ -26,9 +26,6 @@ export default function RuleShow({ rule }: PageProps) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="font-heading text-2xl font-semibold">{rule.label}</h1>
-        <Badge variant="secondary" className="font-mono text-[0.625rem]">
-          {rule.code}
-        </Badge>
         <Badge variant={rule.isActive ? 'default' : 'secondary'}>
           {rule.isActive ? 'Actif' : 'Inactif'}
         </Badge>

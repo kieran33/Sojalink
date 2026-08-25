@@ -14,10 +14,10 @@ export default class Scenario4FailingStepSeeder extends BaseSeeder {
     )
 
     const rule = await SojalinkRule.updateOrCreate(
-      { code: 'scenario-failing-step' },
+      { code: 'rule-failing-step' },
       {
-        code: 'scenario-failing-step',
-        label: 'Scenario failing step',
+        code: 'rule-failing-step',
+        label: 'Règle étape en échec',
         eventTypeId: eventType.id,
         priority: 5,
         isActive: true,
