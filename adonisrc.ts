@@ -145,7 +145,7 @@ export default defineConfig({
         controllers: { source: 'app/http/controllers' },
         transformers: { source: 'app/http/transformers', enabled: true, withSharedProps: true },
       }),
-      indexPages({ framework: 'react' }),
+      indexPages({ framework: 'react' }) as any,
       generateRegistry(),
     ],
     buildStarting: [() => import('@adonisjs/vite/build_hook')],
