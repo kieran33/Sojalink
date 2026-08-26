@@ -24,8 +24,8 @@ const STATUS_FILTERS = [
   { value: 'all', label: 'Tous' },
   { value: 'pending', label: 'En attente' },
   { value: 'processing', label: 'En cours' },
-  { value: 'processed', label: 'Traité' },
-  { value: 'failed', label: 'Échec' },
+  { value: 'processed', label: 'Réussis' },
+  { value: 'failed', label: 'Échoué' },
 ] as const
 
 type StatusFilter = (typeof STATUS_FILTERS)[number]['value']

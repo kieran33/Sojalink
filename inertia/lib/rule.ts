@@ -60,6 +60,7 @@ const dateFormatter = new Intl.DateTimeFormat('fr-FR', {
   year: '2-digit',
   hour: '2-digit',
   minute: '2-digit',
+  second: '2-digit',
 })
 
 export function formatDate(value: string | null | undefined) {
@@ -71,7 +72,9 @@ export function eventTreatedAt(event: RuleEvent) {
 }
 
 export function eventBadgeVariant(status: RuleEvent['status']) {
-  return status === 'failed' ? 'destructive' : 'secondary'
+  if (status === 'failed') return 'destructive'
+  if (status === 'processed') return 'success'
+  return 'secondary'
 }
 
 const ATTEMPT_STATUS_LABELS: Record<RuleAttempt['status'], string> = {
