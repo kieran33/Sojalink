@@ -64,7 +64,7 @@ const dateFormatter = new Intl.DateTimeFormat('fr-FR', {
 })
 
 export function formatDate(value: string | null | undefined) {
-  return value ? dateFormatter.format(new Date(value)) : '—'
+  return value ? dateFormatter.format(new Date(value)) : '-'
 }
 
 export function eventTreatedAt(event: RuleEvent) {

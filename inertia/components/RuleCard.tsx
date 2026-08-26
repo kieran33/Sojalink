@@ -24,7 +24,7 @@ function eventDisplayDate(event: Data.Event) {
 }
 
 function formatEventDate(dateString: string | null) {
-  if (!dateString) return '—'
+  if (!dateString) return '-'
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: '2-digit',
@@ -34,7 +34,18 @@ function formatEventDate(dateString: string | null) {
   }).format(new Date(dateString))
 }
 
-export function RuleCard({ rule, version }: { rule: Data.Rule; version: RuleVersion | undefined }) {
+export function RuleCard({
+  rule,
+  version,
+  unattributedEvents = [],
+}: {
+  rule: Data.Rule
+  version: RuleVersion | undefined
+  unattributedEvents?: Data.Event[]
+}) {
+  const isNoMatchRule = rule.code === 'rule-no-match'
+  const hasUnattributedEvents = isNoMatchRule && unattributedEvents.length > 0
+
   return (
     <Link
       route="rules.show"
@@ -63,8 +74,26 @@ export function RuleCard({ rule, version }: { rule: Data.Rule; version: RuleVers
               Derniers événements traités par le worker
             </span>
 
-            {rule.recentEvents.length === 0 ? (
-              rule.code === 'rule-no-match' ? (
+            {hasUnattributedEvents ? (
+              <Table>
+                <TableBody>
+                  {unattributedEvents.map((event) => (
+                    <TableRow key={event.id} className="hover:bg-transparent">
+                      <TableCell className="w-full max-w-0 truncate text-destructive">
+                        #{event.id} - {event.resolutionErrorMessage}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {formatEventDate(event.failedAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant={eventBadgeVariant(event.status)}>{event.statusLabel}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : rule.recentEvents.length === 0 ? (
+              isNoMatchRule ? (
                 <span className="text-destructive">
                   Aucune règle ne correspond à cet événement, il n'a pas pu être traité
                 </span>
