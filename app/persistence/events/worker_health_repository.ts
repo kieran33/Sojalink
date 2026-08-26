@@ -1,5 +1,6 @@
 import redis from '@adonisjs/redis/services/main'
 import { DateTime } from 'luxon'
+import logger from '@adonisjs/core/services/logger'
 
 type WorkerHealthStats = {
   isRunning: boolean
@@ -17,6 +18,14 @@ export class WorkerHealthRepository {
 
   async recordRun(duration: number): Promise<void> {
     const now = new Date().toISOString()
+
+    const previousHeartbeat = await redis.get(this.heartbeatKey)
+    if (previousHeartbeat) {
+      const gapInSeconds = (Date.now() - new Date(previousHeartbeat).getTime()) / 1000
+      if (gapInSeconds > this.brokeAfterSeconds) {
+        logger.warn(`Worker resuming after being inactive for ${Math.round(gapInSeconds)}s`)
+      }
+    }
 
     await redis.set(this.heartbeatKey, now)
     await redis.lpush(this.durationsKey, duration.toString())
