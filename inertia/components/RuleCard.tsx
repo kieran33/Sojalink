@@ -77,7 +77,7 @@ export function RuleCard({ rule, version }: { rule: Data.Rule; version: RuleVers
                   {rule.recentEvents.map((event) => (
                     <TableRow key={event.id} className="hover:bg-transparent">
                       <TableCell className="w-full max-w-0 truncate">
-                        {event.sourceEntityType} #{event.sourceEntityId}
+                        Événement #{event.id}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                         {formatEventDate(eventDisplayDate(event))}

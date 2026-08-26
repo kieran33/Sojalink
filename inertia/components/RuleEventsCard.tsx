@@ -105,9 +105,7 @@ export function RuleEventsCard({
                   className="cursor-pointer"
                 >
                   <TableCell className="font-mono">#{event.id}</TableCell>
-                  <TableCell className="font-medium">
-                    {event.sourceApp} · {event.sourceEntityType}
-                  </TableCell>
+                  <TableCell className="font-medium">{event.sourceApp}</TableCell>
                   <TableCell>
                     <Badge variant={eventBadgeVariant(event.status)}>{event.statusLabel}</Badge>
                   </TableCell>
