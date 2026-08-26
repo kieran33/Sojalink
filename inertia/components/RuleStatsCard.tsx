@@ -15,7 +15,7 @@ export function RuleStatsCard({ events }: { events: RuleEvent[] }) {
         <div>
           <p className="text-xs text-muted-foreground">Taux de réussite</p>
           <p className="text-2xl font-semibold">
-            {stats.successRate === null ? '—' : `${stats.successRate}%`}
+            {stats.successRate === null ? '-' : `${stats.successRate}%`}
           </p>
         </div>
         <div>

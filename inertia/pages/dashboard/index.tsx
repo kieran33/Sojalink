@@ -7,6 +7,9 @@ import { RuleCard } from '@/components/RuleCard'
 import { RulesTable } from '@/components/RulesTable'
 import { PaginationBar } from '~/components/PaginationBar'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { formatDate } from '@/lib/rule'
 
 type ViewMode = 'cards' | 'table'
 
@@ -35,9 +38,15 @@ type PageProps = InertiaProps<{
   rules: Data.Rule[]
   stats: DashboardStats
   pagination: DashboardPaginationMeta
+  unattributedEvents: Data.Event[]
 }>
 
-export default function DashboardIndex({ rules, stats, pagination }: PageProps) {
+export default function DashboardIndex({
+  rules,
+  stats,
+  pagination,
+  unattributedEvents,
+}: PageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode)
 
   function selectViewMode(mode: ViewMode) {
@@ -55,6 +64,31 @@ export default function DashboardIndex({ rules, stats, pagination }: PageProps) 
         <StatTile label="Événements réussis (24h)" value={stats.processedLast24h} tone="success" />
         <StatTile label="Événements échoués (24h)" value={stats.failedLast24h} tone="destructive" />
       </div>
+
+      {unattributedEvents.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Événements sans règle correspondante
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {unattributedEvents.map((event) => (
+              <div key={event.id} className="flex items-center justify-between gap-2 text-sm">
+                <span>
+                  #{event.id} - {event.resolutionErrorMessage}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {formatDate(event.failedAt)}
+                  </span>
+                  <Badge variant="destructive">{event.statusLabel}</Badge>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex items-center justify-between">
         <ToggleGroup
@@ -79,7 +113,12 @@ export default function DashboardIndex({ rules, stats, pagination }: PageProps) 
       {viewMode === 'cards' ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rules.map((rule) => (
-            <RuleCard key={rule.id} rule={rule} version={rule.displayedVersion} />
+            <RuleCard
+              key={rule.id}
+              rule={rule}
+              version={rule.displayedVersion}
+              unattributedEvents={unattributedEvents}
+            />
           ))}
         </div>
       ) : (

@@ -50,7 +50,7 @@ export function RulesTable({ rules }: { rules: Data.Rule[] }) {
               </Badge>
             </TableCell>
             <TableCell>
-              {rule.displayedVersion ? `v${rule.displayedVersion.versionNumber}` : '—'}
+              {rule.displayedVersion ? `v${rule.displayedVersion.versionNumber}` : '-'}
             </TableCell>
             <TableCell>
               {rule.recentEvents.length === 0 ? (

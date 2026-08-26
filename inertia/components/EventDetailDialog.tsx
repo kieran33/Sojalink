@@ -125,7 +125,7 @@ export function EventDetailDialog({
                           <div className="flex flex-col gap-4">
                             {attempt.errorMessage && (
                               <p className="text-xs text-destructive">
-                                {attempt.errorCode ? `${attempt.errorCode} — ` : ''}
+                                {attempt.errorCode ? `${attempt.errorCode} - ` : ''}
                                 {attempt.errorMessage}
                               </p>
                             )}
@@ -263,7 +263,7 @@ function StepLogRow({ step }: { step: RuleStepLog }) {
         </div>
         {step.errorMessage && (
           <p className="text-xs text-destructive">
-            {step.errorCode ? `${step.errorCode} — ` : ''}
+            {step.errorCode ? `${step.errorCode} - ` : ''}
             {step.errorMessage}
           </p>
         )}
