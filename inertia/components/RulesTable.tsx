@@ -54,13 +54,7 @@ export function RulesTable({ rules }: { rules: Data.Rule[] }) {
             </TableCell>
             <TableCell>
               {rule.recentEvents.length === 0 ? (
-                rule.code === 'rule-no-match' ? (
-                  <span className="text-destructive">
-                    Aucune règle ne correspond à cet événement, il n'a pas pu être traité
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">Aucun événement récent</span>
-                )
+                <span className="text-muted-foreground">Aucun événement récent</span>
               ) : (
                 <div className="flex flex-wrap gap-1">
                   {rule.recentEvents.map((event) => (
