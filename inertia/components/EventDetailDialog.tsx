@@ -59,18 +59,12 @@ export function EventDetailDialog({
           <>
             <DialogHeader className="gap-1.5 border-b px-4 py-4 sm:px-6">
               <div className="flex flex-wrap items-center gap-2 pr-6">
-                <DialogTitle>
-                  #{displayedEvent.id}{' '}
-                  {displayedEvent.eventType?.label ?? displayedEvent.sourceEntityType}
-                </DialogTitle>
+                <DialogTitle>Événement #{displayedEvent.id} </DialogTitle>
                 <Badge variant={eventBadgeVariant(displayedEvent.status)}>
                   {displayedEvent.statusLabel}
                 </Badge>
               </div>
-              <DialogDescription>
-                {displayedEvent.sourceApp} · {displayedEvent.sourceEntityType} #
-                {displayedEvent.sourceEntityId}
-              </DialogDescription>
+              <DialogDescription>{displayedEvent.sourceApp}</DialogDescription>
             </DialogHeader>
 
             <div className="flex flex-col gap-6 overflow-y-auto px-4 py-5 sm:px-6">
