@@ -79,11 +79,11 @@ export function RuleCard({
                 <TableBody>
                   {unattributedEvents.map((event) => (
                     <TableRow key={event.id} className="hover:bg-transparent">
-                      <TableCell className="w-full max-w-0 truncate text-destructive">
-                        #{event.id} - {event.resolutionErrorMessage}
+                      <TableCell className="w-full max-w-0 truncate">
+                        Événement #{event.id}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {formatEventDate(event.failedAt)}
+                        {formatEventDate(eventDisplayDate(event))}
                       </TableCell>
                       <TableCell className="text-right">
                         <Badge variant={eventBadgeVariant(event.status)}>{event.statusLabel}</Badge>
