@@ -23,7 +23,9 @@ export class WorkerHealthRepository {
     if (previousHeartbeat) {
       const gapInSeconds = (Date.now() - new Date(previousHeartbeat).getTime()) / 1000
       if (gapInSeconds > this.brokeAfterSeconds) {
-        logger.warn(`Worker resuming after being inactive for ${Math.round(gapInSeconds)}s`)
+        logger.warn(
+          `Worker heartbeat gap detected: ${Math.round(gapInSeconds)}s since last run (threshold ${this.brokeAfterSeconds}s)`
+        )
       }
     }
 
