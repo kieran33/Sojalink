@@ -24,7 +24,7 @@ const STATUS_FILTERS = [
   { value: 'all', label: 'Tous' },
   { value: 'pending', label: 'En attente' },
   { value: 'processing', label: 'En cours' },
-  { value: 'processed', label: 'Réussis' },
+  { value: 'processed', label: 'Réussi' },
   { value: 'failed', label: 'Échoué' },
 ] as const
 

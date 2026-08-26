@@ -1,8 +1,9 @@
 import SojalinkRule from '#models/sojalink_rule'
+import SojalinkEvent from '#models/sojalink_event'
 
 export default class GetRuleDetails {
   static async handle(ruleId: number) {
-    return SojalinkRule.query()
+    const rule = await SojalinkRule.query()
       .where('id', ruleId)
       .preload('eventType')
       .preload('versions', (versionsQuery) => {
@@ -18,5 +19,23 @@ export default class GetRuleDetails {
         })
       })
       .firstOrFail()
+
+    const unattributedEvents = await SojalinkEvent.query()
+      .where('eventTypeId', rule.eventTypeId)
+      .whereNull('appliedRuleVersionId')
+      .where('status', 'failed')
+      .preload('eventType')
+      .orderBy('createdAt', 'desc')
+
+    const displayedVersion = rule.versions.find((version) => version.isActive) ?? rule.versions[0]
+
+    if (displayedVersion && unattributedEvents.length > 0) {
+      const merged = [...displayedVersion.appliedEvents, ...unattributedEvents].sort(
+        (a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()
+      )
+      displayedVersion.appliedEvents = merged as unknown as typeof displayedVersion.appliedEvents
+    }
+
+    return rule
   }
 }
