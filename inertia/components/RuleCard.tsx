@@ -93,13 +93,7 @@ export function RuleCard({
                 </TableBody>
               </Table>
             ) : rule.recentEvents.length === 0 ? (
-              isNoMatchRule ? (
-                <span className="text-destructive">
-                  Aucune règle ne correspond à cet événement, il n'a pas pu être traité
-                </span>
-              ) : (
-                <span className="text-muted-foreground">Aucun événement récent</span>
-              )
+              <span className="text-muted-foreground">Aucun événement récent</span>
             ) : (
               <Table>
                 <TableBody>
