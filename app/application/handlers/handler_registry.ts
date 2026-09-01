@@ -5,7 +5,7 @@ import { EmailNotificationHandler } from '#application/handlers/email_notificati
 
 @inject()
 export class HandlerRegistry {
-  private readonly handlers: Record<string, StepHandler>
+  private handlers: Record<string, StepHandler>
 
   constructor(emailNotificationHandler: EmailNotificationHandler) {
     this.handlers = {
