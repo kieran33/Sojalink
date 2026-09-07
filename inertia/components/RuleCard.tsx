@@ -57,7 +57,7 @@ export function RuleCard({
         <CardHeader className="border-b">
           <CardAction>
             <Badge variant={rule.isActive ? 'default' : 'secondary'}>
-              {rule.isActive ? 'Actif' : 'Inactif'}
+              {rule.isActive ? 'Active' : 'Inactive'}
             </Badge>
           </CardAction>
           <CardTitle className="text-base font-semibold text-foreground">{rule.label}</CardTitle>

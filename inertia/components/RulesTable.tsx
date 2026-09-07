@@ -39,14 +39,13 @@ export function RulesTable({ rules }: { rules: Data.Rule[] }) {
                 className="flex flex-col gap-0.5 whitespace-normal"
               >
                 <span className="font-medium text-foreground">{rule.label}</span>
-                <span className="text-muted-foreground">{rule.code}</span>
               </Link>
             </TableCell>
             <TableCell>{rule.eventType.label}</TableCell>
             <TableCell>{rule.priority}</TableCell>
             <TableCell>
               <Badge variant={rule.isActive ? 'default' : 'secondary'}>
-                {rule.isActive ? 'Actif' : 'Inactif'}
+                {rule.isActive ? 'Active' : 'Inactive'}
               </Badge>
             </TableCell>
             <TableCell>
