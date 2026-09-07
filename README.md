@@ -9,18 +9,23 @@ Ce guide suit l'ordre réel d'installation : chaque section suppose que les pré
 ## 1. Prérequis
 
 - **Git** :
+
 ```bash
   git --version
 ```
-  Si absent, installer depuis [git-scm.com](https://git-scm.com/downloads).
+
+Si absent, installer depuis [git-scm.com](https://git-scm.com/downloads).
 
 - **Node.js version 24** (celle utilisée en CI et en production — une version différente peut provoquer des erreurs difficiles à diagnostiquer) :
+
 ```bash
   node -v
 ```
-  Si la version affichée ne commence pas par `v24`, installer Node 24 avant de continuer (via [nvm](https://github.com/nvm-sh/nvm), ou le site officiel [nodejs.org](https://nodejs.org)). Après une installation via nvm, fermer et rouvrir le terminal avant de continuer.
+
+Si la version affichée ne commence pas par `v24`, installer Node 24 avant de continuer (via [nvm](https://github.com/nvm-sh/nvm), ou le site officiel [nodejs.org](https://nodejs.org)). Après une installation via nvm, fermer et rouvrir le terminal avant de continuer.
 
 - **npm** (installé automatiquement avec Node) :
+
 ```bash
   npm -v
 ```
@@ -39,12 +44,12 @@ Ce guide suit l'ordre réel d'installation : chaque section suppose que les pré
 
 Aucune configuration particulière n'est requise. Extensions recommandées sous VS Code :
 
-| Extension | Utilité |
-|---|---|
-| **AdonisJS** | Autocomplétion et navigation pour les fichiers AdonisJS (routes, modèles, contrôleurs...) |
-| **Japa** | Lance et visualise les tests directement depuis l'éditeur |
-| **Docker** | Visualise et gère les conteneurs, images et fichiers `docker-compose` depuis VS Code |
-| **ESLint** | Affiche les erreurs de lint dans l'éditeur — `eslint.config.js` est déjà configuré dans le projet |
+| Extension    | Utilité                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| **AdonisJS** | Autocomplétion et navigation pour les fichiers AdonisJS (routes, modèles, contrôleurs...)         |
+| **Japa**     | Lance et visualise les tests directement depuis l'éditeur                                         |
+| **Docker**   | Visualise et gère les conteneurs, images et fichiers `docker-compose` depuis VS Code              |
+| **ESLint**   | Affiche les erreurs de lint dans l'éditeur — `eslint.config.js` est déjà configuré dans le projet |
 
 ---
 
@@ -164,15 +169,24 @@ Vérifier que les conteneurs sont bien démarrés et sains avant de continuer :
 docker compose -f docker-compose.dev.yml ps
 ```
 
+Vérifier également, de façon plus générale, que les conteneurs et l'image utilisée existent bien sur la machine :
+
+```bash
+docker ps
+docker images
+```
+
 Les conteneurs MariaDB et Redis doivent apparaître avec un statut `health: starting` puis `healthy`. MariaDB peut prendre quelques secondes à finir son initialisation après le démarrage — si l'étape suivante échoue avec une erreur de connexion refusée, attendre quelques secondes et réessayer.
 
 > **Conflit de port possible** : si un conteneur refuse de démarrer, ou si `docker compose ps` signale une erreur liée à un port déjà utilisé, un autre service tourne probablement déjà sur ce port sur la machine — MariaDB (3306), Redis (6379), ou même l'application elle-même (3333) plus tard à l'étape 8. Vérifier lequel :
+>
 > ```bash
 > # Windows (Git Bash)
 > netstat -ano | findstr <PORT>
 > # Mac/Linux
 > lsof -i :<PORT>
 > ```
+>
 > Si un processus occupe déjà le port, soit l'arrêter, soit changer le port exposé côté hôte dans `docker-compose.dev.yml` (par exemple `3307:3306` au lieu de `3306:3306`) et adapter la variable correspondante (`DB_PORT`, `REDIS_PORT`) dans `.env`/`.env.test`.
 
 Au tout premier démarrage, MariaDB exécute automatiquement `init-db/init.sql`, qui crée les bases `sojalink_dev` et `sojalink_test` et attribue les droits à l'utilisateur `adonis`. Ce script ne s'exécute qu'une seule fois (tant que le volume de données existe) — voir la section "Réinitialiser Docker" plus bas s'il faut le forcer à se rejouer.
@@ -180,24 +194,27 @@ Au tout premier démarrage, MariaDB exécute automatiquement `init-db/init.sql`,
 ### Vérifier la connexion à la base (optionnel mais recommandé)
 
 Avec un client graphique :
+
 - **Windows** : [HeidiSQL](https://www.heidisql.com/)
 - **Mac** : [TablePlus](https://tableplus.com/) ou [Sequel Ace](https://sequel-ace.com/)
 - **Linux** : [DBeaver](https://dbeaver.io/) ou [TablePlus](https://tableplus.com/)
 
 Ou en ligne de commande, sans installer de client graphique :
+
 ```bash
 docker exec -it <nom_du_conteneur_mariadb> mysql -u adonis -padonis
 ```
+
 (le nom exact du conteneur s'obtient avec `docker ps`)
 
 Informations de connexion, dans tous les cas :
 
-| Champ | Valeur |
-|---|---|
-| Hôte | 127.0.0.1 |
-| Utilisateur | adonis |
-| Mot de passe | adonis |
-| Port | 3306 |
+| Champ        | Valeur    |
+| ------------ | --------- |
+| Hôte         | 127.0.0.1 |
+| Utilisateur  | adonis    |
+| Mot de passe | adonis    |
+| Port         | 3306      |
 
 Les bases `sojalink_dev` et `sojalink_test` doivent apparaître, vides pour l'instant.
 
@@ -290,6 +307,12 @@ node ace test unit
 node ace test integration
 ```
 
+Pour ne lancer qu'un seul test précis, par son nom :
+
+```bash
+node ace test --tests="nom du test"
+```
+
 AdonisJS charge automatiquement `.env.test` pour les tests → base utilisée : `sojalink_test`, jamais `sojalink_dev`.
 
 ---
@@ -323,6 +346,7 @@ Voir l'encart "Conflit de port possible" à l'étape 5.
 
 **Erreurs de type `Module has no exported member 'XxxSchema'` sur un modèle**
 Le fichier de schéma généré n'est plus à jour avec les migrations :
+
 ```bash
 node ace schema:generate
 ```
@@ -338,25 +362,30 @@ Une ancienne migration a été supprimée du code après avoir été jouée. En 
 ## Réinitialiser Docker et la base de données
 
 **Redémarrer les conteneurs sans perdre les données :**
+
 ```bash
 docker compose -f docker-compose.dev.yml down
 docker compose -f docker-compose.dev.yml up -d
 ```
 
 **Repartir de zéro, en effaçant aussi les données du conteneur** (utile si `init-db/init.sql` a changé, ou si la base est dans un état incohérent) :
+
 ```bash
 docker compose -f docker-compose.dev.yml down -v
 docker compose -f docker-compose.dev.yml up -d
 node ace migration:run
 ```
+
 > Le flag `-v` supprime les volumes associés — toutes les données du conteneur sont perdues, y compris les bases `sojalink_dev`/`sojalink_test` elles-mêmes, à recréer entièrement.
 
 **Repartir de zéro uniquement au niveau des migrations, sans toucher au conteneur Docker** (en local uniquement — jamais en production, qui utilise `migration:run --force`, jamais `fresh`, pour ne pas perdre de données) :
+
 ```bash
 node ace migration:fresh
 ```
 
 Pour ne réinitialiser que la base de test, sans toucher à `sojalink_dev` :
+
 ```bash
 NODE_ENV=test node ace migration:fresh
 ```
@@ -378,16 +407,16 @@ Le worker consomme les événements en attente dans `sojalink_events`, en arriè
 
 ### Architecture des fichiers
 
-| Fichier | Rôle |
-|---|---|
-| `app/jobs/poll_pending_events_job.ts` | Job AdonisJS Queue dispatché par le scheduler |
-| `app/application/events/pending_events_worker.ts` | Point d'entrée applicatif appelé par le job |
-| `app/application/events/event_processor.ts` | Orchestration complète : réservation, résolution, exécution, statut |
-| `app/application/events/rule_resolver.ts` | Détermine quelle règle s'applique à un événement |
-| `app/application/events/event_executor.ts` | Exécute le pipeline étape par étape |
-| `app/persistence/events/event_repository.ts` | Réservation atomique du prochain événement `pending` |
-| `app/persistence/events/worker_health_repository.ts` | Supervision du worker (Redis) |
-| `start/scheduler.ts` | Planifie le job toutes les 10 secondes hors environnement `test` |
+| Fichier                                              | Rôle                                                                |
+| ---------------------------------------------------- | ------------------------------------------------------------------- |
+| `app/jobs/poll_pending_events_job.ts`                | Job AdonisJS Queue dispatché par le scheduler                       |
+| `app/application/events/pending_events_worker.ts`    | Point d'entrée applicatif appelé par le job                         |
+| `app/application/events/event_processor.ts`          | Orchestration complète : réservation, résolution, exécution, statut |
+| `app/application/events/rule_resolver.ts`            | Détermine quelle règle s'applique à un événement                    |
+| `app/application/events/event_executor.ts`           | Exécute le pipeline étape par étape                                 |
+| `app/persistence/events/event_repository.ts`         | Réservation atomique du prochain événement `pending`                |
+| `app/persistence/events/worker_health_repository.ts` | Supervision du worker (Redis)                                       |
+| `start/scheduler.ts`                                 | Planifie le job toutes les 10 secondes hors environnement `test`    |
 
 ### Réservation atomique
 
