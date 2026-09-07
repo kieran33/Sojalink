@@ -59,8 +59,27 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Copy .env.test
-        run: cp .env.test .env
+      - name: Create .env for tests
+        run: |
+          cat <<'EOF' > .env
+          TZ=UTC
+          PORT=3333
+          HOST=localhost
+          NODE_ENV=test
+          LOG_LEVEL=info
+          APP_KEY=COLLE_ICI_UNE_CLE_GENEREE
+          APP_URL=http://${HOST}:${PORT}
+          SESSION_DRIVER=memory
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_USER=root
+          DB_PASSWORD=root
+          DB_DATABASE=sojalink_test
+          QUEUE_DRIVER=database
+          REDIS_HOST=127.0.0.1
+          REDIS_PORT=6379
+          REDIS_PASSWORD=
+          EOF
 
       - name: Run migrations
         run: NODE_ENV=test node ace migration:run --force
