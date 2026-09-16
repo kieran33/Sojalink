@@ -11,7 +11,9 @@ export interface ApiDefinition {
     show: typeof routes['register.show']
     store: typeof routes['register.store']
   }
-  dashboard: typeof routes['dashboard']
+  dashboard: typeof routes['dashboard'] & {
+    seedDemo: typeof routes['dashboard.seedDemo']
+  }
   rules: {
     show: typeof routes['rules.show']
   }

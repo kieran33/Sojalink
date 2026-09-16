@@ -27,3 +27,8 @@ router
 router.on('/').redirectToPath('/dashboard')
 router.get('/dashboard', [controllers.Dashboard, 'index']).as('dashboard').use(middleware.auth())
 router.get('/rules/:id', [controllers.Rules, 'show']).as('rules.show').use(middleware.auth())
+
+router
+  .post('/dashboard/seed-demo', [controllers.Dashboard, 'seedDemo'])
+  .as('dashboard.seedDemo')
+  .use(middleware.auth())

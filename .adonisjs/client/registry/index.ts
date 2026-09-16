@@ -48,6 +48,12 @@ const routes = {
     tokens: [{"old":"/rules/:id","type":0,"val":"rules","end":""},{"old":"/rules/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['rules.show']['types'],
   },
+  'dashboard.seedDemo': {
+    methods: ["POST"],
+    pattern: '/dashboard/seed-demo',
+    tokens: [{"old":"/dashboard/seed-demo","type":0,"val":"dashboard","end":""},{"old":"/dashboard/seed-demo","type":0,"val":"seed-demo","end":""}],
+    types: placeholder as Registry['dashboard.seedDemo']['types'],
+  },
 } as const satisfies Record<string, AdonisEndpoint>
 
 export { routes }

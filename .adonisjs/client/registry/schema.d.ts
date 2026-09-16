@@ -91,4 +91,16 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/rules_controller').default['show']>>>
     }
   }
+  'dashboard.seedDemo': {
+    methods: ["POST"]
+    pattern: '/dashboard/seed-demo'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['seedDemo']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['seedDemo']>>>
+    }
+  }
 }

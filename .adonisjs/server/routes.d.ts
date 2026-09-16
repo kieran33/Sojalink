@@ -11,6 +11,7 @@ export type ScannedRoutes = {
     'register.store': { paramsTuple?: []; params?: {} }
     'dashboard': { paramsTuple?: []; params?: {} }
     'rules.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'dashboard.seedDemo': { paramsTuple?: []; params?: {} }
   }
   GET: {
     'login.show': { paramsTuple?: []; params?: {} }
@@ -28,6 +29,7 @@ export type ScannedRoutes = {
     'login.store': { paramsTuple?: []; params?: {} }
     'logout': { paramsTuple?: []; params?: {} }
     'register.store': { paramsTuple?: []; params?: {} }
+    'dashboard.seedDemo': { paramsTuple?: []; params?: {} }
   }
 }
 declare module '@adonisjs/core/types/http' {
