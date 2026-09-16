@@ -39,7 +39,7 @@ export default class ListRulesWithStats {
         .whereNull('appliedRuleVersionId')
         .where('status', 'failed')
         .orderBy('failedAt', 'desc')
-        .limit(10),
+        .limit(3),
     ])
 
     return {
